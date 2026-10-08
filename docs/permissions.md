@@ -139,3 +139,15 @@ Para cada tabela crítica (locacoes, itens_locacao, referencias_externas, recebi
 - Grants por coluna: ver `supabase/migrations/20261008120800_rls_privilegios.sql`. Colunas de estado, local/responsável atuais, quantidades derivadas, `empresa_id` (UPDATE), `codigo` e autoria nunca são graváveis por `authenticated` (testado em `tests/rls/estrutura.test.ts`).
 - Evidências: RESPONSAVEL_LOCAL vê evidências de BEM/LOTE sob sua responsabilidade, das vistorias desses itens, das movimentações em que é origem/destino e das ocorrências que registrou ou que tratam de seus itens.
 - Provas automatizadas: `tests/rls/isolamento-empresas.test.ts` (gate A×B), `tests/rls/atores.test.ts` (anônimo, inativo, sem empresa, AUDITOR, RESPONSAVEL_LOCAL, matriz de escrita, operações de estado), `tests/rls/storage.test.ts`.
+
+## 8. Interface e servidor (Fase 3)
+
+| Recurso                   | Regra                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Menu                      | `navegacaoPara(permissoes)`: Recebimentos/Devoluções exigem `dados.ler_geral`; Cobranças `valores.ver`; Relatórios `relatorio.gerar` |
+| `/configuracoes`          | Qualquer membro (próprio perfil); seção Empresa com `empresa.configurar`; link de usuários com `usuarios.gerenciar`                  |
+| `/configuracoes/usuarios` | `usuarios.gerenciar` (senão "não encontrada" — D-37)                                                                                 |
+| Actions de usuários       | `usuarios.gerenciar` no servidor + `rpc_*` revalidam no banco; ADMIN não desativa a si mesmo; último ADMIN protegido                 |
+| Empresa ativa             | Sempre derivada das associações ativas lidas do banco; cookie forjado é ignorado (testado em E2E)                                    |
+
+Provas automatizadas: `tests/e2e/perfis.spec.ts` (8 perfis × 3 viewports), `tests/e2e/isolamento.spec.ts`, `tests/integration/usuarios-admin.test.ts`.

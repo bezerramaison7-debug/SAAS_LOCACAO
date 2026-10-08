@@ -207,3 +207,30 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 2)
 **Decisão:** Regras que cruzam tabelas e não cabem em FK (modo de controle do item, mesma locação, alvo da ocorrência, modelo publicado, entidade da evidência) são validadas por triggers `security definer` que apenas leem — para que a RLS de quem grava não produza falso negativo. Fluxos (confirmar, devolver, encerrar) continuam nas funções de domínio.
+
+### D-36 — Stack Supabase local sem Docker (GoTrue + PostgREST + Mailpit)
+
+**Status:** Aceita (Fase 3)
+**Contexto:** O ambiente de desenvolvimento em nuvem não tem daemon Docker, mas alcança o registro do Docker Hub. E2E de autenticação exige o Supabase Auth real.
+**Decisão:** `scripts/stack/` extrai das imagens oficiais (pelo protocolo de registro, sem Docker) os binários nas MESMAS versões fixadas pelo Supabase CLI 2.120 (`supabase/gotrue:v2.197.0`, `postgrest/postgrest:v16.4`, `axllent/mailpit:v1.31.3`) e os executa sobre o Postgres local; um gateway Node (porta 54321) substitui o Kong. Chaves anon/service_role derivadas do segredo de DEMONSTRAÇÃO público do Supabase local. O esquema `auth` vem das migrations do próprio GoTrue. CI continua usando `supabase start` (Docker).
+**Consequências:** E2E reais (login, recuperação, convite) rodam localmente sem mocks. Storage API ainda não faz parte da stack (necessária na Fase 5).
+
+### D-37 — Página sem permissão responde "não encontrada"
+
+**Status:** Aceita (Fase 3)
+**Decisão:** Páginas protegidas chamam `notFound()` quando falta permissão (indistinguível de inexistente; `forbidden()` ainda é experimental no Next 16.4). Com `loading.tsx` (streaming), o status HTTP fica 200 com o conteúdo de 404 e `noindex`; nenhum dado protegido é enviado. Server Actions devolvem erro tipado; o banco revalida tudo.
+
+### D-38 — Links de e-mail com token_hash e recuperação sem PKCE
+
+**Status:** Aceita (Fase 3)
+**Decisão:** Modelos de e-mail (`supabase/templates/`) apontam para `/auth/confirm?token_hash=…&type=…`, verificado no servidor com `verifyOtp`. O pedido de recuperação usa um cliente sem sessão em fluxo implícito, para que o link funcione em qualquer navegador (o PKCE do cliente SSR exigiria o mesmo navegador). Convites usam `auth.admin.inviteUserByEmail` (service role) e a associação à empresa é feita por `rpc_vincular_usuario` com o JWT do ADMIN.
+
+### D-39 — Redirecionamentos pela URL canônica da aplicação
+
+**Status:** Aceita (Fase 3)
+**Decisão:** Redirecionamentos do proxy e de `/auth/confirm` usam `NEXT_PUBLIC_APP_URL`, nunca o Host da requisição: o cookie de sessão pertence ao host canônico (evita perder a sessão entre `localhost` e `127.0.0.1`) e o redirecionamento não pode ser influenciado por cabeçalho Host forjado. Parâmetro `next` validado por `destinoSeguro` (sem open redirect).
+
+### D-40 — Auditoria de autenticação pseudonimizada
+
+**Status:** Aceita (Fase 3)
+**Decisão:** Login (sucesso/falha), logout, pedido e redefinição de senha são gravados em `privado.auditoria_autenticacao` via `public.registrar_evento_autenticacao` (EXECUTE só para service_role). E-mail e IP só como HMAC-SHA256 com chave derivada de `REPORT_SIGNING_SECRET`; nunca senha ou token. Falha ao auditar não bloqueia o login, mas é logada.

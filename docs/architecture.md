@@ -272,6 +272,23 @@ Padrões de performance: `(select auth.uid())` nas policies, índice `usuarios_e
 - Recuperação de senha: `resetPasswordForEmail` → `/auth/confirm` (PKCE `verifyOtp`/`exchangeCodeForSession`) → `/recuperar-senha/redefinir`. Resposta sempre neutra ("se o e-mail existir...").
 - Login: rate limit do próprio Supabase Auth + registro em `auditoria_autenticacao` (hash do e-mail, nunca senha).
 
+### 6.1 Implementação (Fase 3)
+
+| Peça                                                      | Arquivo                                                                            |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Usuário verificado (getClaims)                            | `src/lib/auth/sessao.ts`                                                           |
+| Contexto (empresa ativa, papel, permissões)               | `src/lib/auth/contexto.ts` — `getEstadoAcesso()`, `exigirContexto()`               |
+| Regra da empresa ativa (cookie = preferência)             | `src/lib/auth/empresa-ativa.ts`                                                    |
+| Autorização no servidor                                   | `src/lib/auth/autorizacao.ts` — `pode`, `exigirPermissao`, `exigirPermissaoPagina` |
+| `next` seguro e rotas públicas                            | `src/lib/auth/redirecionamento.ts`                                                 |
+| Login, logout, recuperação, redefinição, troca de empresa | `src/features/auth/`                                                               |
+| Usuários (convite, papel, ativação)                       | `src/features/usuarios/` + `rpc_*` (migration 011)                                 |
+| Perfil e empresa                                          | `src/features/empresa/`                                                            |
+| Auditoria de autenticação                                 | `src/lib/audit/autenticacao.ts` (D-40)                                             |
+| Links de e-mail                                           | `src/app/auth/confirm/route.ts` + `supabase/templates/` (D-38)                     |
+
+Fluxo de cada requisição autenticada: proxy renova cookies (sem sessão → `/login?next=`) → `(app)/layout.tsx` chama `exigirContexto()` (redireciona para `/login`, `/sem-acesso` ou `/selecionar-empresa`) → página/action verifica permissão → banco aplica RLS com o JWT.
+
 ## 7. Storage e evidências [D-07]
 
 Fluxo de upload (`POST /api/files`, multipart, streaming com limite de bytes):
