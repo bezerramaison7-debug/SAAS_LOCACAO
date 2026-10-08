@@ -2309,7 +2309,36 @@ export type Database = {
       };
     };
     Functions: {
+      buscar_locacoes: {
+        Args: {
+          p_centro_custo?: string;
+          p_empresa: string;
+          p_fornecedor?: string;
+          p_limite?: number;
+          p_local?: string;
+          p_offset?: number;
+          p_periodo_fim?: string;
+          p_periodo_inicio?: string;
+          p_q?: string;
+          p_status?: Database["public"]["Enums"]["status_locacao"][];
+          p_termino_ate?: string;
+        };
+        Returns: {
+          centro_custo: string;
+          codigo: string;
+          created_at: string;
+          fornecedor: string;
+          id: string;
+          inicio_previsto: string;
+          pedidos_sectra: string;
+          status: Database["public"]["Enums"]["status_locacao"];
+          status_financeiro: Database["public"]["Enums"]["status_financeiro"];
+          termino_previsto: string;
+          total: number;
+        }[];
+      };
       consumir_limite_taxa: { Args: { p_acao: string }; Returns: boolean };
+      pendencias_ativacao_locacao: { Args: { p_locacao: string }; Returns: string[] };
       registrar_evento_autenticacao: {
         Args: {
           p_email_hash?: string;
@@ -2325,6 +2354,8 @@ export type Database = {
         Args: { p_associacao: string; p_papel: Database["public"]["Enums"]["papel_usuario"] };
         Returns: undefined;
       };
+      rpc_ativar_locacao: { Args: { p_locacao: string }; Returns: undefined };
+      rpc_cancelar_locacao: { Args: { p_locacao: string; p_motivo: string }; Returns: undefined };
       rpc_definir_usuario_ativo: {
         Args: { p_associacao: string; p_ativo: boolean; p_motivo: string };
         Returns: undefined;
@@ -2342,6 +2373,8 @@ export type Database = {
           user_id: string;
         }[];
       };
+      rpc_nova_versao_checklist: { Args: { p_modelo: string }; Returns: string };
+      rpc_publicar_checklist: { Args: { p_modelo: string }; Returns: undefined };
       rpc_vincular_usuario: {
         Args: {
           p_email: string;
