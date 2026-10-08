@@ -64,3 +64,12 @@ test.describe("smoke", () => {
     await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
   });
 });
+
+test("health profundo informa prontidão do Supabase sem detalhes internos", async ({ request }) => {
+  const resposta = await request.get("/api/health?profundo=1");
+  expect([200, 503]).toContain(resposta.status());
+  expect(resposta.headers()["cache-control"]).toContain("no-store");
+  const corpo = (await resposta.json()) as { dependencias: { supabase: string } };
+  expect(Object.keys(corpo).sort()).toEqual(["dependencias", "status", "verificado_em"]);
+  expect(["ok", "indisponivel"]).toContain(corpo.dependencias.supabase);
+});

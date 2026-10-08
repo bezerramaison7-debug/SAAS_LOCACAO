@@ -53,8 +53,6 @@ jobs:
       - name: Testes unitários
         run: npm run test
 
-      # Fase 2: testes de integração e RLS contra Supabase local (supabase start).
-
       - name: Build de produção
         run: npm run build
 
@@ -74,3 +72,39 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
+  banco:
+    name: Banco (migrations, seed, integração, RLS, tipos)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Subir Postgres do Supabase (Docker)
+        run: npx supabase db start
+
+      - name: Aplicar migrations + seed em banco efêmero
+        run: npx supabase db reset --local
+
+      - name: Testes de integração
+        run: npm run test:integration
+
+      - name: Testes de RLS (isolamento entre empresas e perfis)
+        run: npm run test:rls
+
+      - name: Tipos do banco atualizados
+        run: |
+          npm run db:types
+          git diff --exit-code src/types/database.ts
+
+      - name: Parar Supabase
+        if: always()
+        run: npx supabase stop --no-backup
