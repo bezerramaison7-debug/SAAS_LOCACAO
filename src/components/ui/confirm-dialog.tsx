@@ -14,6 +14,10 @@ type ConfirmDialogProps = {
   /** Ações irreversíveis usam a variante "perigo". */
   perigoso?: boolean;
   onConfirmar: () => Promise<void> | void;
+  /** Conteúdo adicional (ex.: campo de motivo) entre a descrição e os botões. */
+  children?: ReactNode;
+  /** Desabilita o botão de confirmação (ex.: motivo ainda não preenchido). */
+  confirmarDesabilitado?: boolean;
 };
 
 /** Confirmação obrigatória para operações críticas ou irreversíveis. */
@@ -24,6 +28,8 @@ export function ConfirmDialog({
   rotuloConfirmar,
   perigoso = false,
   onConfirmar,
+  children,
+  confirmarDesabilitado = false,
 }: ConfirmDialogProps) {
   const [aberto, setAberto] = useState(false);
   const [pendente, iniciar] = useTransition();
@@ -38,6 +44,7 @@ export function ConfirmDialog({
           <AlertDialog.Description asChild>
             <div className="text-texto-suave">{descricao}</div>
           </AlertDialog.Description>
+          {children}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialog.Cancel asChild>
               <Button variante="secundaria" disabled={pendente}>
@@ -46,7 +53,7 @@ export function ConfirmDialog({
             </AlertDialog.Cancel>
             <Button
               variante={perigoso ? "perigo" : "primaria"}
-              disabled={pendente}
+              disabled={pendente || confirmarDesabilitado}
               onClick={() =>
                 iniciar(async () => {
                   await onConfirmar();

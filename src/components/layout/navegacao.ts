@@ -10,6 +10,7 @@ import {
   PackageCheck,
   Receipt,
   Settings,
+  Shapes,
   Undo2,
 } from "lucide-react";
 import { type Route } from "next";
@@ -61,6 +62,13 @@ export const NAVEGACAO: readonly ItemNavegacao[] = [
     icone: FileBarChart,
     fase: 8,
     permissao: "relatorio.gerar",
+  },
+  {
+    href: "/cadastros",
+    rotulo: "Cadastros",
+    icone: Shapes,
+    fase: 4,
+    permissao: "dados.ler_geral",
   },
   { href: "/configuracoes", rotulo: "Configurações", icone: Settings, fase: 3 },
 ];
