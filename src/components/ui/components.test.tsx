@@ -26,7 +26,7 @@ describe("Button", () => {
   it("asChild renderiza o elemento filho com o estilo", () => {
     render(
       <Button asChild variante="primaria">
-        <a href="/locacoes">Locações</a>
+        <a href="#conteudo">Locações</a>
       </Button>,
     );
     const link = screen.getByRole("link", { name: "Locações" });

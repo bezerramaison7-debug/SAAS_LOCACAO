@@ -10,7 +10,7 @@ import {
   lancadoComAtraso,
   utcParaHorarioLocal,
 } from "./datas";
-import { formatarMoeda, formatarQuantidade, parseMoedaBR, somar } from "./moeda";
+import { formatarMoeda, formatarQuantidade, parseMoedaBR, valorEditavelBR, somar } from "./moeda";
 
 // Normaliza o espaço não separável que o Intl usa entre "R$" e o número.
 const nbsp = (s: string) => s.replace(/ /g, " ");
@@ -98,5 +98,12 @@ describe("moeda", () => {
   it("formata quantidades com até 3 casas", () => {
     expect(formatarQuantidade("1234.5")).toBe("1.234,5");
     expect(formatarQuantidade("10")).toBe("10");
+  });
+});
+
+describe("valorEditavelBR", () => {
+  it("formata para edição e volta pelo parse sem perda", () => {
+    expect(valorEditavelBR("1234.5")).toBe("1.234,50");
+    expect(parseMoedaBR(valorEditavelBR("999999999999.99"))).toBe("999999999999.99");
   });
 });

@@ -52,3 +52,13 @@ const formatadorQuantidade = new Intl.NumberFormat("pt-BR", { maximumFractionDig
 export function formatarQuantidade(valor: DecimalString | Decimal): string {
   return formatadorQuantidade.format(paraDecimal(valor).toFixed(3) as Intl.StringNumericLiteral);
 }
+
+const formatadorValorEditavel = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Valor para preencher um campo editável em pt-BR ("1.234,56", sem "R$"). */
+export function valorEditavelBR(valor: DecimalString): string {
+  return formatadorValorEditavel.format(paraDecimal(valor).toFixed(2) as Intl.StringNumericLiteral);
+}
