@@ -13,6 +13,8 @@
 --              gestor.a, auditor.a, inativo.a (associação inativa)
 --   Empresa B: admin.b, operacao.b
 --   Sem empresa: sem.empresa
+--   recuperacao.a (GESTOR, Empresa A): reservado ao teste E2E de recuperação de senha
+--   multi (GESTOR nas Empresas A e B): troca de empresa
 -- IDs fixos espelhados em tests/support/fixtures.ts.
 -- =============================================================================
 
@@ -33,6 +35,8 @@ declare
   u_admin_b constant uuid := 'b1000000-0000-4000-8000-000000000001';
   u_operacao_b constant uuid := 'b1000000-0000-4000-8000-000000000002';
   u_sem_empresa constant uuid := 'c1000000-0000-4000-8000-000000000001';
+  u_recuperacao_a constant uuid := 'a1000000-0000-4000-8000-000000000009';
+  u_multi constant uuid := 'c1000000-0000-4000-8000-000000000002';
   -- cadastros A
   forn_a1 constant uuid := 'a2000000-0000-4000-8000-000000000001';
   forn_a2 constant uuid := 'a2000000-0000-4000-8000-000000000002';
@@ -108,7 +112,9 @@ begin
     (u_inativo_a, 'inativo.a', '[DEMO] Ivo Inativo (A)'),
     (u_admin_b, 'admin.b', '[DEMO] Bruna Admin (B)'),
     (u_operacao_b, 'operacao.b', '[DEMO] Otávio Operação (B)'),
-    (u_sem_empresa, 'sem.empresa', '[DEMO] Sem Empresa')
+    (u_sem_empresa, 'sem.empresa', '[DEMO] Sem Empresa'),
+    (u_recuperacao_a, 'recuperacao.a', '[DEMO] Regina Recuperação (A)'),
+    (u_multi, 'multi', '[DEMO] Marta Multiempresa (A e B)')
   ) as v (id, login, nome) loop
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -142,8 +148,11 @@ begin
     (emp_a, u_gestor_a, 'GESTOR', true),
     (emp_a, u_auditor_a, 'AUDITOR', true),
     (emp_a, u_inativo_a, 'OPERACAO', false),
+    (emp_a, u_recuperacao_a, 'GESTOR', true),
     (emp_b, u_admin_b, 'ADMIN', true),
-    (emp_b, u_operacao_b, 'OPERACAO', true);
+    (emp_b, u_operacao_b, 'OPERACAO', true),
+    (emp_a, u_multi, 'GESTOR', true),
+    (emp_b, u_multi, 'GESTOR', true);
 
   -- ----------------------------------------------------------- cadastros ----
   insert into public.fornecedores (id, empresa_id, razao_social, nome_fantasia, documento, contato) values

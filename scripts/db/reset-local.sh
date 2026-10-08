@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Recria o banco local SEM Docker (D-19): camada de compatibilidade Supabase +
-# migrations em ordem + seed de demonstração. Equivalente a `supabase db reset`.
+# Recria o banco local SEM Docker (D-19/D-36): camada de compatibilidade
+# Supabase + esquema auth + migrations em ordem + seed de demonstração.
+# Equivalente a `supabase db reset`.
 #
-#   scripts/db/reset-local.sh            # com seed
-#   SEM_SEED=1 scripts/db/reset-local.sh # só schema
+#   scripts/db/reset-local.sh            # auth via shim (testes de banco)
+#   STACK=1 scripts/db/reset-local.sh    # auth via migrations do GoTrue (stack.sh)
+#   SEM_SEED=1 scripts/db/reset-local.sh # sem seed
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -19,7 +21,13 @@ fi
 PSQL=(psql -h "$HOST" -p "$PORTA" -U postgres -v ON_ERROR_STOP=1 -q -X)
 
 "${PSQL[@]}" -d template1 -c "drop database if exists postgres with (force)" -c "create database postgres"
-"${PSQL[@]}" -d postgres -f "$RAIZ/supabase/tests/bootstrap-local.sql" >/dev/null
+"${PSQL[@]}" -d postgres -f "$RAIZ/supabase/tests/bootstrap-base.sql" >/dev/null
+if [ "${STACK:-0}" = "1" ]; then
+  echo "→ auth (migrations do GoTrue)"
+  "${STACK_DIR:-/var/tmp/saas-stack}/gotrue/usr/local/bin/auth" migrate >/dev/null
+else
+  "${PSQL[@]}" -d postgres -f "$RAIZ/supabase/tests/bootstrap-auth-shim.sql" >/dev/null
+fi
 
 for arquivo in "$RAIZ"/supabase/migrations/*.sql; do
   echo "→ $(basename "$arquivo")"

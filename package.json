@@ -7,7 +7,7 @@
     "node": ">=22.12 <23"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings=0 .",
@@ -22,6 +22,8 @@
     "db:local:start": "scripts/db/local-pg.sh start",
     "db:local:stop": "scripts/db/local-pg.sh stop",
     "db:local:reset": "scripts/db/reset-local.sh",
+    "stack:iniciar": "scripts/stack/stack.sh iniciar",
+    "stack:parar": "scripts/stack/stack.sh parar",
     "db:types": "supabase gen types typescript --db-url \"${TEST_DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}\" --schema public 2>/dev/null > src/types/database.ts && prettier --write src/types/database.ts",
     "check:bundle-secrets": "node scripts/check-bundle-secrets.mjs",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle-secrets"

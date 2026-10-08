@@ -1,11 +1,12 @@
 -- =============================================================================
--- Camada de compatibilidade Supabase para Postgres "puro" (D-19).
+-- Camada de compatibilidade Supabase — BASE (D-19, D-36).
 --
--- Usada SOMENTE quando o Supabase CLI (Docker) não está disponível. Recria o
--- mínimo do ambiente Supabase de que as migrations e os testes dependem:
---   * papéis anon / authenticated / service_role / authenticator;
---   * esquema `extensions` com pgcrypto e pg_trgm;
---   * esquema `auth` (users, identities, uid(), role(), jwt());
+-- Usada SOMENTE quando o Supabase CLI (Docker) não está disponível. Recria:
+--   * papéis anon / authenticated / service_role / authenticator /
+--     supabase_auth_admin;
+--   * esquema `extensions` com pgcrypto, pg_trgm e uuid-ossp;
+--   * esquema `auth` VAZIO, de propriedade de supabase_auth_admin (as tabelas
+--     vêm das migrations do GoTrue — stack local — ou do shim de testes);
 --   * esquema `storage` (buckets, objects com RLS, foldername());
 --   * privilégios padrão do Supabase em `public` (GRANT ALL para anon,
 --     authenticated e service_role) — as migrations precisam revogá-los, como
@@ -27,6 +28,9 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticator') then
     create role authenticator noinherit login password 'postgres';
   end if;
+  if not exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then
+    create role supabase_auth_admin noinherit createrole login password 'postgres';
+  end if;
 end
 $$;
 
@@ -37,75 +41,12 @@ create schema if not exists extensions;
 grant usage on schema extensions to anon, authenticated, service_role;
 create extension if not exists pgcrypto with schema extensions;
 create extension if not exists pg_trgm with schema extensions;
+create extension if not exists "uuid-ossp" with schema extensions;
 
--- ---------------------------------------------------------------- auth -------
-create schema if not exists auth;
-grant usage on schema auth to anon, authenticated, service_role;
-
-create table if not exists auth.users (
-  instance_id uuid,
-  id uuid primary key,
-  aud varchar(255),
-  role varchar(255),
-  email varchar(255) unique,
-  encrypted_password varchar(255),
-  email_confirmed_at timestamptz,
-  invited_at timestamptz,
-  confirmation_token varchar(255),
-  recovery_token varchar(255),
-  email_change_token_new varchar(255),
-  email_change varchar(255),
-  email_change_token_current varchar(255) default '',
-  phone_change varchar(255) default '',
-  phone_change_token varchar(255) default '',
-  reauthentication_token varchar(255) default '',
-  last_sign_in_at timestamptz,
-  raw_app_meta_data jsonb,
-  raw_user_meta_data jsonb,
-  is_super_admin boolean,
-  banned_until timestamptz,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create table if not exists auth.identities (
-  id uuid primary key default gen_random_uuid(),
-  provider_id text not null,
-  user_id uuid not null references auth.users (id) on delete cascade,
-  identity_data jsonb not null,
-  provider text not null,
-  last_sign_in_at timestamptz,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique (provider_id, provider)
-);
-
--- Mesma definição usada pelo Supabase.
-create or replace function auth.uid() returns uuid
-language sql stable as $$
-  select coalesce(
-    nullif(current_setting('request.jwt.claim.sub', true), ''),
-    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
-  )::uuid
-$$;
-
-create or replace function auth.role() returns text
-language sql stable as $$
-  select coalesce(
-    nullif(current_setting('request.jwt.claim.role', true), ''),
-    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role')
-  )::text
-$$;
-
-create or replace function auth.jwt() returns jsonb
-language sql stable as $$
-  select coalesce(
-    nullif(current_setting('request.jwt.claim', true), ''),
-    nullif(current_setting('request.jwt.claims', true), '')
-  )::jsonb
-$$;
-
-grant execute on function auth.uid(), auth.role(), auth.jwt() to anon, authenticated, service_role;
+create schema if not exists auth authorization supabase_auth_admin;
+grant usage on schema auth to anon, authenticated, service_role, postgres;
+alter role supabase_auth_admin set search_path = auth;
+grant create on database postgres to supabase_auth_admin;
 
 -- -------------------------------------------------------------- storage ------
 create schema if not exists storage;
