@@ -25,8 +25,11 @@ PSQL=(psql -h "$HOST" -p "$PORTA" -U postgres -v ON_ERROR_STOP=1 -q -X)
 if [ "${STACK:-0}" = "1" ]; then
   echo "→ auth (migrations do GoTrue)"
   "${STACK_DIR:-/var/tmp/saas-stack}/gotrue/usr/local/bin/auth" migrate >/dev/null
+  echo "→ storage (migrations da Storage API)"
+  "$RAIZ/scripts/stack/storage.sh" migrar >/dev/null
 else
   "${PSQL[@]}" -d postgres -f "$RAIZ/supabase/tests/bootstrap-auth-shim.sql" >/dev/null
+  "${PSQL[@]}" -d postgres -f "$RAIZ/supabase/tests/bootstrap-storage-shim.sql" >/dev/null
 fi
 
 for arquivo in "$RAIZ"/supabase/migrations/*.sql; do

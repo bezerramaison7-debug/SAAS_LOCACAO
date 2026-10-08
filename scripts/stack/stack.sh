@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Stack Supabase local SEM Docker (D-36): Postgres + GoTrue + PostgREST +
-# Mailpit + gateway, com as MESMAS versões fixadas pelo Supabase CLI.
+# Stack Supabase local SEM Docker (D-36, D-51): Postgres + GoTrue + PostgREST +
+# Storage API + Mailpit + gateway, com as MESMAS versões fixadas pelo Supabase CLI.
 #
 #   scripts/stack/stack.sh iniciar   # baixa imagens (1ª vez), recria banco e sobe tudo
 #   scripts/stack/stack.sh parar
@@ -18,6 +18,7 @@ APP_URL="${NEXT_PUBLIC_APP_URL:-http://127.0.0.1:3100}"
 GOTRUE_IMG="supabase/gotrue:v2.197.0"
 POSTGREST_IMG="postgrest/postgrest:v16.4"
 MAILPIT_IMG="axllent/mailpit:v1.31.3"
+STORAGE_IMG="supabase/storage-api:v1.79.36"
 
 eval "$(node "$RAIZ/scripts/stack/chaves.mjs" | sed 's/^/export STACK_/')"
 
@@ -25,6 +26,7 @@ baixar() {
   [ -x "$DIR/gotrue/usr/local/bin/auth" ] || python3 -I "$RAIZ/scripts/stack/extrair-imagem.py" "$GOTRUE_IMG" "$DIR/gotrue"
   [ -x "$DIR/postgrest/bin/postgrest" ] || python3 -I "$RAIZ/scripts/stack/extrair-imagem.py" "$POSTGREST_IMG" "$DIR/postgrest"
   [ -x "$DIR/mailpit/mailpit" ] || python3 -I "$RAIZ/scripts/stack/extrair-imagem.py" "$MAILPIT_IMG" "$DIR/mailpit"
+  [ -f "$DIR/storage/app/dist/start/server.js" ] || python3 -I "$RAIZ/scripts/stack/extrair-imagem.py" "$STORAGE_IMG" "$DIR/storage"
 }
 
 ambiente_gotrue() {
@@ -64,7 +66,7 @@ iniciar_processo() { # nome comando...
 }
 
 parar() {
-  for nome in gateway postgrest gotrue mailpit; do
+  for nome in gateway storage postgrest gotrue mailpit; do
     if [ -f "$DIR/$nome.pid" ]; then kill "$(cat "$DIR/$nome.pid")" 2>/dev/null || true; rm -f "$DIR/$nome.pid"; fi
   done
 }
@@ -83,15 +85,18 @@ case "${1:-iniciar}" in
     PGRST_DB_SCHEMAS=public PGRST_DB_ANON_ROLE=anon PGRST_JWT_SECRET="$STACK_JWT_SECRET" \
     PGRST_SERVER_HOST=127.0.0.1 PGRST_SERVER_PORT=54330 PGRST_DB_EXTRA_SEARCH_PATH=public,extensions \
       iniciar_processo postgrest "$DIR/postgrest/bin/postgrest"
+    rm -rf "$DIR/storage-dados" # arquivos acompanham o banco recriado
+    iniciar_processo storage "$RAIZ/scripts/stack/storage.sh" servir
     iniciar_processo gateway node "$RAIZ/scripts/stack/gateway.mjs"
     esperar http://127.0.0.1:54324/livez mailpit
     esperar http://127.0.0.1:9999/health gotrue
     esperar "http://127.0.0.1:54321/rest/v1/?apikey=$STACK_ANON_KEY" postgrest
+    esperar http://127.0.0.1:5000/status storage
     echo "Stack local pronta: API http://127.0.0.1:54321 · e-mails http://127.0.0.1:54324"
     ;;
   parar) parar; echo "Stack parada (Postgres continua: npm run db:local:stop)." ;;
   status)
-    for nome in mailpit gotrue postgrest gateway; do
+    for nome in mailpit gotrue postgrest storage gateway; do
       if [ -f "$DIR/$nome.pid" ] && kill -0 "$(cat "$DIR/$nome.pid")" 2>/dev/null; then echo "✓ $nome"; else echo "✗ $nome"; fi
     done ;;
   migrar-auth) ambiente_gotrue; "$DIR/gotrue/usr/local/bin/auth" migrate ;;

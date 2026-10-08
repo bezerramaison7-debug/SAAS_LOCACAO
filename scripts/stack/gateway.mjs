@@ -3,6 +3,7 @@
  * Gateway da stack local (D-36) — substitui o Kong do `supabase start`:
  *   /auth/v1/*  → GoTrue      (127.0.0.1:9999)
  *   /rest/v1/*  → PostgREST   (127.0.0.1:54330)
+ *   /storage/v1/* → Storage API (127.0.0.1:5000; valida o JWT ela mesma, como no Kong)
  * Como o Kong, exige `apikey` válida (anon ou service_role) nas rotas de dados
  * e repassa o restante sem alterações. Somente desenvolvimento/teste.
  */
@@ -16,6 +17,7 @@ const PORTA = Number(process.env.GATEWAY_PORT ?? 54321);
 const ROTAS = [
   { prefixo: "/auth/v1", destino: { host: "127.0.0.1", port: 9999 }, exigeChave: false },
   { prefixo: "/rest/v1", destino: { host: "127.0.0.1", port: 54330 }, exigeChave: true },
+  { prefixo: "/storage/v1", destino: { host: "127.0.0.1", port: 5000 }, exigeChave: false },
 ];
 const CHAVES = new Set([ANON_KEY, SERVICE_ROLE_KEY]);
 

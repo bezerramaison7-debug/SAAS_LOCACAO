@@ -57,12 +57,17 @@ describe("storage privado", () => {
       );
       expect(ins.ok).toBe(false);
       if (!ins.ok) expect(ins.codigo).toBe(SQLSTATE.privilegioInsuficiente);
+      // Negado por RLS (0 linhas) ou, na Storage API real, por trigger que proíbe
+      // DELETE direto — em ambos os casos o objeto permanece intacto.
       const upd = await s.tentar("update storage.objects set name = name || 'x' where name = $1", [
         caminho,
       ]);
-      expect(upd.ok && upd.rowCount).toBe(0);
+      expect(!upd.ok || upd.rowCount === 0).toBe(true);
       const del = await s.tentar("delete from storage.objects where name = $1", [caminho]);
-      expect(del.ok && del.rowCount).toBe(0);
+      expect(!del.ok || del.rowCount === 0).toBe(true);
+      await s.como(superusuario);
+      const restante = await s.query("select 1 from storage.objects where name = $1", [caminho]);
+      expect(restante).toHaveLength(1);
     });
   });
 
