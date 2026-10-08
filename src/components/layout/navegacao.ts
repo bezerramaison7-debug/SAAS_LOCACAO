@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { type Route } from "next";
 
+import { type Permissao } from "@/lib/permissions/matriz";
+
 export type ItemNavegacao = {
   href: Route;
   rotulo: string;
@@ -22,6 +24,8 @@ export type ItemNavegacao = {
   fase: number;
   /** Aparece na barra inferior do celular (máx. 4). */
   atalhoMovel?: boolean;
+  /** Permissão exigida para exibir o item (ausente = qualquer membro). */
+  permissao?: Permissao;
 };
 
 /**
@@ -37,16 +41,37 @@ export const NAVEGACAO: readonly ItemNavegacao[] = [
     icone: PackageCheck,
     fase: 5,
     atalhoMovel: true,
+    permissao: "dados.ler_geral",
   },
   { href: "/bens", rotulo: "Bens e lotes", icone: Package, fase: 5 },
   { href: "/movimentacoes", rotulo: "Movimentações", icone: ArrowLeftRight, fase: 6 },
   { href: "/vistorias", rotulo: "Vistorias", icone: ClipboardCheck, fase: 5 },
   { href: "/ocorrencias", rotulo: "Ocorrências", icone: AlertTriangle, fase: 6 },
-  { href: "/devolucoes", rotulo: "Devoluções", icone: Undo2, fase: 7 },
-  { href: "/cobrancas", rotulo: "Cobranças", icone: Receipt, fase: 7 },
-  { href: "/relatorios", rotulo: "Relatórios", icone: FileBarChart, fase: 8 },
+  {
+    href: "/devolucoes",
+    rotulo: "Devoluções",
+    icone: Undo2,
+    fase: 7,
+    permissao: "dados.ler_geral",
+  },
+  { href: "/cobrancas", rotulo: "Cobranças", icone: Receipt, fase: 7, permissao: "valores.ver" },
+  {
+    href: "/relatorios",
+    rotulo: "Relatórios",
+    icone: FileBarChart,
+    fase: 8,
+    permissao: "relatorio.gerar",
+  },
   { href: "/configuracoes", rotulo: "Configurações", icone: Settings, fase: 3 },
 ];
+
+/**
+ * Itens visíveis para as permissões do usuário. Esconder um item é só UX: cada
+ * página revalida a permissão no servidor e o banco aplica RLS.
+ */
+export function navegacaoPara(permissoes: readonly Permissao[]): ItemNavegacao[] {
+  return NAVEGACAO.filter((item) => !item.permissao || permissoes.includes(item.permissao));
+}
 
 export function itemAtivo(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);

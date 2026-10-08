@@ -10,14 +10,18 @@ import { cn } from "@/components/ui/cn";
 
 import { itemAtivo, NAVEGACAO } from "./navegacao";
 
+/** `permitidos`: hrefs liberados pelo servidor (ícones não são serializáveis). */
+type PropsNavegacao = { permitidos: readonly string[] };
+
 const classeItem =
   "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-xs text-texto-suave";
 
 /** Navegação compacta inferior (< 1024px): atalhos + "Mais" com o menu completo. */
-export function MobileNav() {
+export function MobileNav({ permitidos }: PropsNavegacao) {
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
-  const atalhos = NAVEGACAO.filter((item) => item.atalhoMovel);
+  const itens = NAVEGACAO.filter((i) => permitidos.includes(i.href));
+  const atalhos = itens.filter((item) => item.atalhoMovel);
 
   return (
     <nav
@@ -62,7 +66,7 @@ export function MobileNav() {
                   Todos os módulos do sistema
                 </Dialog.Description>
                 <ul className="space-y-1">
-                  {NAVEGACAO.map(({ href, rotulo, icone: Icone }) => {
+                  {itens.map(({ href, rotulo, icone: Icone }) => {
                     const ativo = itemAtivo(pathname, href);
                     return (
                       <li key={href}>

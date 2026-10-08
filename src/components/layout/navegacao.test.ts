@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { itemAtivo, NAVEGACAO } from "./navegacao";
+import { permissoesDoPapel } from "@/lib/permissions/matriz";
+
+import { itemAtivo, NAVEGACAO, navegacaoPara } from "./navegacao";
 
 describe("navegação", () => {
   it("todo item aponta para uma rota existente em src/app/(app)", () => {
@@ -21,5 +23,20 @@ describe("navegação", () => {
     expect(itemAtivo("/locacoes/123", "/locacoes")).toBe(true);
     expect(itemAtivo("/locacoes", "/locacoes")).toBe(true);
     expect(itemAtivo("/locacoes-arquivadas", "/locacoes")).toBe(false);
+  });
+});
+
+describe("navegação por permissão", () => {
+  it("ADMIN vê todos os itens", () => {
+    expect(navegacaoPara(permissoesDoPapel("ADMIN"))).toHaveLength(NAVEGACAO.length);
+  });
+
+  it("RESPONSAVEL_LOCAL não vê recebimentos, devoluções, cobranças nem relatórios", () => {
+    const hrefs = navegacaoPara(permissoesDoPapel("RESPONSAVEL_LOCAL")).map((i) => i.href);
+    expect(hrefs).not.toContain("/recebimentos");
+    expect(hrefs).not.toContain("/devolucoes");
+    expect(hrefs).not.toContain("/cobrancas");
+    expect(hrefs).not.toContain("/relatorios");
+    expect(hrefs).toContain("/bens");
   });
 });

@@ -40,14 +40,13 @@ export function FormField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>
+      <Label
+        htmlFor={id}
+        className={
+          obrigatorio ? "after:ml-1 after:text-perigo after:content-['*'_/_'']" : undefined
+        }
+      >
         {rotulo}
-        {obrigatorio ? (
-          <span className="text-perigo" aria-hidden>
-            {" "}
-            *
-          </span>
-        ) : null}
       </Label>
       {children({
         id,

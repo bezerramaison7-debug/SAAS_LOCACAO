@@ -2310,6 +2310,47 @@ export type Database = {
     };
     Functions: {
       consumir_limite_taxa: { Args: { p_acao: string }; Returns: boolean };
+      registrar_evento_autenticacao: {
+        Args: {
+          p_email_hash?: string;
+          p_evento: string;
+          p_ip_hash?: string;
+          p_motivo?: string;
+          p_request_id?: string;
+          p_user_id?: string;
+        };
+        Returns: undefined;
+      };
+      rpc_alterar_papel: {
+        Args: { p_associacao: string; p_papel: Database["public"]["Enums"]["papel_usuario"] };
+        Returns: undefined;
+      };
+      rpc_definir_usuario_ativo: {
+        Args: { p_associacao: string; p_ativo: boolean; p_motivo: string };
+        Returns: undefined;
+      };
+      rpc_listar_usuarios_empresa: {
+        Args: { p_empresa: string };
+        Returns: {
+          associacao_id: string;
+          ativo: boolean;
+          criado_em: string;
+          email: string;
+          nome: string;
+          papel: Database["public"]["Enums"]["papel_usuario"];
+          ultimo_acesso: string;
+          user_id: string;
+        }[];
+      };
+      rpc_vincular_usuario: {
+        Args: {
+          p_email: string;
+          p_empresa: string;
+          p_nome: string;
+          p_papel: Database["public"]["Enums"]["papel_usuario"];
+        };
+        Returns: string;
+      };
       status_bem_ativo: {
         Args: { p_status: Database["public"]["Enums"]["status_bem"] };
         Returns: boolean;
