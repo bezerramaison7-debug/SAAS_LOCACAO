@@ -1,0 +1,63 @@
+{
+  "name": "saas-locacao",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MicroSaaS de rastreabilidade operacional de locações (complementar ao Sectra).",
+  "engines": {
+    "node": ">=22.12 <23"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --max-warnings=0 .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:integration": "vitest run --project integration --passWithNoTests",
+    "test:rls": "vitest run --project rls --passWithNoTests",
+    "e2e": "playwright test",
+    "check:bundle-secrets": "node scripts/check-bundle-secrets.mjs",
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle-secrets"
+  },
+  "dependencies": {
+    "@date-fns/tz": "1.5.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.3",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "date-fns": "4.4.0",
+    "decimal.js": "10.6.0",
+    "lucide-react": "1.53.0",
+    "next": "16.4.0",
+    "radix-ui": "1.7.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@tailwindcss/turbopack": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.0",
+    "eslint-config-prettier": "10.1.8",
+    "jsdom": "29.1.1",
+    "prettier": "3.9.9",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3"
+  }
+}

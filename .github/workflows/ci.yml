@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Valores FICTÍCIOS apenas para build/testes. Os "SENTINEL" permitem detectar
+  # vazamento de segredos no bundle do navegador (scripts/check-bundle-secrets.mjs).
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+  SUPABASE_SERVICE_ROLE_KEY: ci-service-role-SENTINEL-7f3a9c2e
+  REPORT_SIGNING_SECRET: ci-report-secret-SENTINEL-0123456789abcdef
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  qualidade:
+    name: Qualidade (formatação, lint, tipos, unit, build, E2E smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências (falha se o lockfile divergir)
+        run: npm ci
+
+      - name: Auditoria de dependências de produção
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Formatação
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Testes unitários
+        run: npm run test
+
+      # Fase 2: testes de integração e RLS contra Supabase local (supabase start).
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Nenhum segredo no bundle do navegador
+        run: npm run check:bundle-secrets
+
+      - name: Instalar navegadores do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke (Chromium em 375, 768 e 1280 px)
+        run: npm run e2e
+
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
