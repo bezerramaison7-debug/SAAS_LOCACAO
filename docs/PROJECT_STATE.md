@@ -2,34 +2,38 @@
 
 ## Fase atual
 
-**Fase 4 — Cadastros e locações: CONCLUÍDA, aguardando autorização para a Fase 5 (Recebimento, bens/lotes, vistoria e evidências).**
+**Fase 5 — Recebimento e evidências: CONCLUÍDA, aguardando autorização para a Fase 6 (Movimentações e ocorrências).**
 
 ## Última tarefa concluída
 
-Gate da Fase 4 atingido: Compras cadastra fornecedor, cria a locação em etapas (identificação → referências Sectra → itens individual e lote → vigência → revisão), ativa com persistência real e a encontra na lista pelo número do pedido (E2E em 375/768/1280 px).
+Gate da Fase 5 atingido: a Operação faz um recebimento completo no celular (375 px), com bem individual avariado e lote, fotos pela câmera, checklist de entrada da versão vigente, local e responsável, revisão e confirmação transacional; as evidências são privadas (URL assinada de 5 min só para quem lê a entidade; anônimo 401, outra empresa 404). Também verificado em 768 e 1280 px.
 
 ## Funcionalidades concluídas
 
-**Fases 1–3:** fundação, banco multiempresa com RLS, autenticação real, contexto de empresa, autorização no servidor, administração de usuários.
+**Fases 1–4:** fundação, banco multiempresa com RLS, autenticação real, usuários, cadastros, locações em etapas com Sectra manual, lista e detalhe.
 
-**Fase 4:**
+**Fase 5:**
 
-- `/cadastros`: fornecedores, locais, centros de custo, categorias (modo individual/lote fixo na criação; identificação individual só para INDIVIDUAL), checklists versionados (rascunho → perguntas → publicar → nova versão). Busca, situação e paginação 25/50/100 na URL; inativação sem exclusão.
-- `/locacoes`: busca server-side (`buscar_locacoes`) por código, pedido Sectra, fornecedor, bem ou lote; filtros de situação, fornecedor, centro de custo, local, período e término (7/15/30 dias) na URL.
-- `/locacoes/nova` e `/locacoes/[id]/editar?etapa=…`: rascunho no servidor; referências Sectra manuais (D-41); itens com valores em pt-BR e transporte decimal exato (D-43); vigência; revisão com pendências do banco; ativação com confirmação.
-- `/locacoes/[id]?aba=…`: resumo (saldos, documentos Sectra, vincular documento após ativação), itens com saldos, recebimentos, bens e lotes, movimentações, documentos, devoluções, cobranças, histórico — por permissão (D-45). Cancelamento com motivo.
-- Migration 012 `20261008122000_locacoes_cadastros`.
-- Menu "Cadastros" (`dados.ler_geral`).
+- Recebimento em 6 telas (D-50): criação para locação ATIVA; itens e identificação (série/placa/patrimônio conforme a categoria, condição); fotos com `capture`; checklist de entrada (versão vigente congelada, respostas validadas por tipo, fotos por pergunta); local, responsável e data do fato (fuso da empresa); revisão com pendências do banco.
+- Confirmação transacional (`rpc_confirmar_recebimento`): bens DISPONIVEL no local/responsável, lote por item, vistorias vinculadas e concluídas, `inicio_efetivo` da locação, ocorrência AVARIA para avariado, auditoria.
+- Excesso (RN-25, D-48): aguarda autorização de Compras com justificativa; autorização confirma e abre DIVERGENCIA_QUANTIDADE; reabrir para corrigir.
+- Descarte de rascunho (autor/ADMIN) e cancelamento de confirmado (ADMIN, sem eventos posteriores — F5.6).
+- Evidências (D-49): `POST /api/files` e `GET /api/files/{id}`; substituição e remoção lógica com motivo; galeria com miniaturas.
+- `/bens` (bens e lotes, filtros por código/série/local), detalhe de bem e lote (vistorias, fotos, recebimento), `/vistorias` e detalhe somente leitura.
+- F4.8: contrato e documentos anexados à locação (aba Documentos).
+- Ação primária "Registrar recebimento" na locação ativa.
+- Storage API oficial na stack local sem Docker (D-51).
+- Migration 013 `20261008123000_recebimento_vistoria_evidencias`.
 
 ## Funcionalidades parciais
 
-- Recebimentos, bens, vistorias, movimentações, ocorrências, devoluções, cobranças, relatórios e painel ainda exibem "disponível a partir da Fase N" (D-28). As abas do detalhe já leem os dados reais dessas tabelas.
-- F4.7 aditivo de itens e F4.8 anexo de contrato (P1) adiados (D-46).
-- Storage API não está na stack local sem Docker (necessária na Fase 5).
+- Movimentações, ocorrências (tratamento), devoluções, cobranças, relatórios e painel ainda exibem "disponível a partir da Fase N" (D-28).
+- F5.7 (geolocalização opcional nas fotos, P1): a API já aceita latitude/longitude, mas a interface não as coleta.
+- F4.7 (aditivo de itens, P1) continua pendente (D-46).
 
 ## Próximas tarefas
 
-Fase 5 — recebimento (rascunho, confirmação transacional, excesso com autorização), bens/lotes, vistoria de entrada com checklist vigente e evidências (upload privado). Incluir F4.8 (anexo de contrato) junto com o Storage e avaliar F4.7 (aditivo).
+Fase 6 — transferência de local/responsável com aceite, linha do tempo, tratamento de ocorrências, troca, manutenção, extravio e QR Code.
 
 ## Bugs conhecidos
 
@@ -37,30 +41,31 @@ Nenhum.
 
 ## Decisões tomadas
 
-D-01 a D-46 em `docs/decisions.md`. Novas: D-41 (Sectra manual), D-42 (etapas com rascunho no servidor), D-43 (decimais), D-44 (busca SQL), D-45 (abas por URL/permissão), D-46 (aditivo/anexo adiados).
+D-01 a D-53 em `docs/decisions.md`. Novas: D-47 (vistoria sobre a linha do recebimento), D-48 (excesso), D-49 (evidências), D-50 (fluxo em 6 telas), D-51 (Storage local), D-52 (CSP e https), D-53 (pré-condições de E2E).
 
 ## Migrations aplicadas
 
-`20261008120000` … `20261008120900` (Fase 2), `20261008121000_usuarios_autenticacao` (Fase 3), `20261008122000_locacoes_cadastros` (Fase 4).
+`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5).
 
 ## Variáveis/configurações necessárias
 
-Sem novidades em relação à Fase 3 (`.env.local` com chaves de DEMONSTRAÇÃO, `NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100`; produção com `app.ambiente = 'producao'`).
+Sem variáveis novas. Homologação/produção: buckets privados criados pela migration 010; `NEXT_PUBLIC_SUPABASE_URL` em https (D-52).
 
 ## Arquivos importantes
 
-- `src/features/cadastros/**`, `src/features/locacoes/**`, `src/components/forms/acao-confirmada.tsx`.
-- `src/app/(app)/cadastros/**`, `src/app/(app)/locacoes/**`.
-- `src/lib/db/{busca,gerados}.ts`, `src/lib/format/{decimal-json,moeda}.ts`.
-- `supabase/migrations/20261008122000_locacoes_cadastros.sql`.
-- `tests/e2e/{cadastros,locacoes}.spec.ts`, `tests/integration/locacoes.test.ts`.
+- `src/lib/evidencias/*`, `src/app/api/files/**`, `src/features/evidencias/**`.
+- `src/features/recebimentos/**`, `src/app/(app)/recebimentos/**`.
+- `src/features/bens/**`, `src/app/(app)/bens/**`, `src/app/(app)/vistorias/**`.
+- `supabase/migrations/20261008123000_recebimento_vistoria_evidencias.sql`.
+- `scripts/stack/storage.sh`, `supabase/tests/bootstrap-storage-shim.sql`.
+- `tests/integration/recebimentos.test.ts`, `tests/e2e/recebimentos.spec.ts`, `tests/e2e/support/dados.ts`.
 
 ## Testes atualmente passando
 
-- Unit: 227 (26 arquivos).
-- Integração: 96 (6 arquivos).
+- Unit: 246 (28 arquivos).
+- Integração: 114 (7 arquivos).
 - RLS: 235 (4 arquivos).
-- E2E (Chromium 375/768/1280, Auth real): 248 passando, 9 pulados por aplicabilidade.
+- E2E (Chromium 375/768/1280, Auth e Storage reais): 264 passando, 11 pulados por aplicabilidade.
 
 ## Testes atualmente falhando
 
@@ -68,16 +73,17 @@ Nenhum.
 
 ## Dívidas técnicas
 
-- `npm audit` (dev): as mesmas vulnerabilidades altas da cadeia `eslint-config-next`; produção: 0.
-- O CI (`supabase start`) ainda não foi executado no GitHub (nenhum PR aberto).
-- Páginas sem permissão retornam HTTP 200 com conteúdo de 404 por causa do streaming (D-37).
-- Abas do detalhe limitam a 200 linhas por aba (sem paginação interna); suficiente para o MVP, revisar com volume real.
+- `npm audit` (dev): as mesmas vulnerabilidades da cadeia `eslint-config-next`; produção: 0.
+- CI (`supabase start`) ainda não executado no GitHub (nenhum PR aberto).
+- Páginas sem permissão retornam HTTP 200 com conteúdo de 404 (D-37).
+- Imagens não são decodificadas no servidor (só _magic bytes_); PDF ativo detectado por varredura simples; sem job de limpeza de órfãos (D-49).
+- Abas do detalhe da locação limitadas a 200 linhas.
 
 ## Ambiente de desenvolvimento observado
 
-- Sem daemon Docker; Docker Hub acessível; GitHub bloqueado pelo proxy.
-- Stack local: `npm run stack:iniciar` (Postgres 54322, API 54321, Mailpit 54324).
+- Sem daemon Docker; Docker Hub acessível com limite de pulls anônimos (100/h por IP compartilhado — o extrator espera em 429); ECR Public bloqueado pelo proxy para blobs; GitHub bloqueado.
+- Stack local: `npm run stack:iniciar` (Postgres 54322, API 54321 com Auth/REST/Storage, Mailpit 54324).
 
 ## Próximo passo recomendado
 
-Aguardar autorização explícita para iniciar a **Fase 5 — Recebimento, bens/lotes, vistoria e evidências**.
+Aguardar autorização explícita para iniciar a **Fase 6 — Movimentações e ocorrências**.

@@ -264,3 +264,40 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 4)
 **Decisão:** F4.7 (aditivo de itens em locação ativa, D-14) e F4.8 (anexo de contrato/pedido) não entram no gate da Fase 4. O anexo depende da Storage API (Fase 5); o aditivo exige `rpc_aditivo_item` com motivo. Ambos ficam registrados como pendências; a aba "Documentos" já lista anexos da locação quando existirem.
+
+### D-47 — Vistoria de entrada sobre a linha do recebimento
+
+**Status:** Aceita (Fase 5)
+**Contexto:** O lote só nasce na confirmação (D-33), mas o checklist de entrada precisa ser feito antes dela (RN-22, RN-83).
+**Decisão:** `vistorias.item_recebimento_id` identifica a linha durante o rascunho; `rpc_iniciar_vistoria_entrada` congela a versão PUBLICADA vigente da família da categoria (RN-81). A confirmação valida respostas obrigatórias e fotos exigidas, vincula cada vistoria ao bem/lote criado e a conclui na mesma transação. Vistorias só são criadas por função de domínio (INSERT revogado do cliente); respostas são gravadas por `rpc_salvar_respostas_vistoria` e validadas por tipo em trigger.
+
+### D-48 — Excesso: autorização que confirma
+
+**Status:** Aceita (Fase 5)
+**Decisão:** Confirmar com quantidade acima do contratado leva o recebimento a `AGUARDANDO_AUTORIZACAO` (bloqueado para edição). Quem tem `recebimento.autorizar_excesso` autoriza com justificativa (≥ 10) e a própria autorização efetiva o recebimento, abrindo ocorrência `DIVERGENCIA_QUANTIDADE` por item. A Operação pode devolver ao rascunho para corrigir (`rpc_reabrir_recebimento`), o que invalida a solicitação. Item avariado exige foto e abre ocorrência `AVARIA`.
+
+### D-49 — Envio e leitura de evidências
+
+**Status:** Aceita (Fase 5)
+**Decisão:** `POST /api/files` (route handler): origem conferida contra `NEXT_PUBLIC_APP_URL` (CSRF — rotas de API não têm a proteção das Server Actions), tamanho pelo `Content-Length`, limite por usuário (`evidencia.upload`), autorização prévia no banco com o JWT do usuário (`rpc_preparar_evidencia`, que também devolve os limites da empresa), tipo por _magic bytes_, PDF com conteúdo ativo recusado, SHA-256, caminho RN-91 gerado no servidor, gravação no bucket privado com service role (única escrita permitida no Storage) e registro com o JWT do usuário (`rpc_registrar_evidencia`/`rpc_substituir_evidencia`); falha no registro remove o objeto. `GET /api/files/{id}` lê a evidência pela RLS e redireciona (302, `no-store`, `no-referrer`) para URL assinada de 5 minutos gerada com o cliente do usuário. Remoção e substituição são lógicas (RN-95).
+
+### D-50 — Fluxo mobile em 6 telas
+
+**Status:** Aceita (Fase 5)
+**Decisão:** Os 10 passos do fluxo (locação → itens → quantidade/bens → identificação → condição → fotos → checklist → local → responsável → revisão/confirmação) foram agrupados em 6 telas com URL própria (`?etapa=`): locação (criação), itens e identificação (inclui condição), fotos, checklist, local e responsável (com data do fato), revisão. Cada passo grava no servidor; a revisão mostra as pendências calculadas pelo banco (`pendencias_recebimento`) e o excesso (`excesso_recebimento`).
+
+### D-51 — Storage API na stack local
+
+**Status:** Aceita (Fase 5)
+**Decisão:** `supabase/storage-api:v1.79.36` (versão do Supabase CLI) é extraída da imagem e executada com o Node musl da própria imagem pelo carregador musl dela, para que os módulos nativos correspondam. O esquema `storage` vem das migrations oficiais da Storage API (antes das migrations da aplicação, como no Supabase real); o shim de storage ficou separado para os testes de banco sem a stack. O extrator espera e repete em HTTP 429 (limite de pulls anônimos do Docker Hub).
+
+### D-52 — `upgrade-insecure-requests` só com Supabase em HTTPS
+
+**Status:** Aceita (Fase 5)
+**Contexto:** Em build de produção com Supabase local em http, a diretiva fazia o navegador promover as URLs assinadas para https e a CSP bloqueava as fotos.
+**Decisão:** A diretiva é emitida apenas quando `NEXT_PUBLIC_SUPABASE_URL` é https (homologação/produção). O E2E verifica que a miniatura é efetivamente decodificada.
+
+### D-53 — Pré-condições de E2E gravadas no banco local
+
+**Status:** Aceita (Fase 5)
+**Decisão:** Testes E2E que dependem de quantidades contratadas criam a própria locação ativa diretamente no banco local (`tests/e2e/support/dados.ts`, recusa banco não local); todo o fluxo sob teste continua pela interface. Evita que dados acumulados entre execuções mudem o resultado (ex.: excesso).

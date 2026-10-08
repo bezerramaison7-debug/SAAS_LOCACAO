@@ -165,3 +165,20 @@ Provas automatizadas: `tests/e2e/perfis.spec.ts` (8 perfis × 3 viewports), `tes
 | Abas do detalhe                         | D-45 (`valores.ver`, `dados.ler_geral`, `auditoria.ler`)                                                                  | RLS das tabelas de cada aba                                                                   |
 
 Provas: `tests/e2e/{cadastros,locacoes}.spec.ts` (3 viewports), `tests/integration/locacoes.test.ts`.
+
+## 10. Recebimento, vistoria e evidências (Fase 5)
+
+| Recurso                        | Interface/servidor                                                           | Banco                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/recebimentos` (consulta)     | `dados.ler_geral`                                                            | RLS `pode_ler`                                                                          |
+| Novo recebimento / etapas      | `recebimento.registrar` (ADMIN, OPERACAO); edição só em RASCUNHO             | policies + `rpc_*` exigem rascunho e locação ATIVA                                      |
+| Vistoria de entrada            | `vistoria.registrar`                                                         | `rpc_iniciar_vistoria_entrada`, `rpc_salvar_respostas_vistoria`; INSERT direto revogado |
+| Autorizar excesso              | `recebimento.autorizar_excesso` (ADMIN, COMPRAS), com justificativa          | `rpc_autorizar_excesso`                                                                 |
+| Descartar rascunho             | autor do rascunho ou ADMIN, com motivo                                       | `rpc_descartar_recebimento`                                                             |
+| Cancelar confirmado            | `recebimento.cancelar_confirmado` (ADMIN), sem eventos posteriores           | `rpc_cancelar_recebimento_confirmado`                                                   |
+| Enviar evidência               | `evidencia.enviar` + acesso à entidade                                       | `rpc_preparar_evidencia` / `rpc_registrar_evidencia`; INSERT direto negado              |
+| Substituir / remover evidência | `evidencia.substituir_remover` (ADMIN, OPERACAO), remoção com motivo         | `rpc_substituir_evidencia` / `rpc_remover_evidencia`                                    |
+| Ler arquivo                    | quem lê a evidência pela RLS                                                 | policy de `storage.objects` + URL assinada de 5 min                                     |
+| `/bens`, `/vistorias`          | qualquer membro; RESPONSAVEL_LOCAL vê só o que está sob sua responsabilidade | RLS `pode_ler` ou `ve_bem`/`ve_lote`                                                    |
+
+Provas: `tests/integration/recebimentos.test.ts`, `tests/e2e/recebimentos.spec.ts` (inclui origem externa, outra empresa, conteúdo inválido e acesso anônimo).

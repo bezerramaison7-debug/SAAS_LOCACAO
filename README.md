@@ -2,7 +2,7 @@
 
 MicroSaaS web, multiempresa, para rastrear equipamentos locados **depois** do pedido de compra feito no Sectra: recebimento, vistoria fotográfica, localização, responsável, movimentações, ocorrências, devolução, encerramento de cobrança e relatório em PDF.
 
-> **Estado:** Fase 4 (cadastros e locações) concluída: cadastros com busca e paginação, checklists versionados, locação em etapas com vínculo manual ao Sectra, itens individuais/lote, ativação/cancelamento, lista filtrável e detalhe com abas. Recebimentos e vistorias a partir da Fase 5 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+> **Estado:** Fase 5 (recebimento e evidências) concluída: recebimento em etapas no celular com bens, lotes, checklist de entrada e fotos privadas, autorização de excesso e telas de bens e vistorias. Movimentações e ocorrências a partir da Fase 6 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 
 ## Requisitos
 
@@ -39,7 +39,7 @@ npx supabase start          # API, Auth, Storage e Postgres em 127.0.0.1:54321/5
 npx supabase db reset       # migrations + seed de demonstração
 ```
 
-Sem Docker — stack completa (Postgres + Auth + PostgREST + Mailpit, mesmas versões do CLI, D-36):
+Sem Docker — stack completa (Postgres + Auth + PostgREST + Storage + Mailpit, mesmas versões do CLI, D-36, D-51):
 
 ```bash
 npm run stack:iniciar       # baixa os binários na 1ª vez, recria o banco e sobe tudo

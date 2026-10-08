@@ -218,20 +218,21 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 
 ### 4.4 Migrations (Fase 2)
 
-| Arquivo                                              | Conteúdo                                                                                          |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `20261008120000_fundacao_tipos.sql`                  | extensões, esquema `privado`, enums, tabela de transições                                         |
-| `20261008120100_nucleo_multiempresa.sql`             | empresas, perfis, usuarios_empresa, papel_permissoes, funções de segurança, sequências            |
-| `20261008120200_cadastros.sql`                       | fornecedores, locais, centros de custo, checklists versionados, categorias                        |
-| `20261008120300_locacoes_ativos.sql`                 | locações, referências externas, itens, recebimentos, bens, lotes, itens de recebimento            |
-| `20261008120400_eventos.sql`                         | vistorias, respostas, movimentações, ocorrências, devoluções, itens de devolução, cobranças       |
-| `20261008120500_evidencias_relatorios_auditoria.sql` | evidências, relatórios, auditoria, auditoria de autenticação, limite de taxa                      |
-| `20261008120600_triggers.sql`                        | autoria, códigos, guarda de transição, auditoria, imutabilidade, último ADMIN, consistência       |
-| `20261008120700_visoes_saldo.sql`                    | `status_bem_ativo`, `v_saldo_item_locacao`, `v_saldo_locacao` (security_invoker)                  |
-| `20261008120800_rls_privilegios.sql`                 | revogação dos padrões do Supabase, grants por coluna, RLS de todas as tabelas                     |
-| `20261008120900_storage.sql`                         | buckets privados e policies de leitura                                                            |
-| `20261008121000_usuarios_autenticacao.sql` (Fase 3)  | administração de usuários e auditoria de autenticação                                             |
-| `20261008122000_locacoes_cadastros.sql` (Fase 4)     | pendências/ativação/cancelamento de locação, `buscar_locacoes`, publicar/nova versão de checklist |
+| Arquivo                                                       | Conteúdo                                                                                             |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `20261008120000_fundacao_tipos.sql`                           | extensões, esquema `privado`, enums, tabela de transições                                            |
+| `20261008120100_nucleo_multiempresa.sql`                      | empresas, perfis, usuarios_empresa, papel_permissoes, funções de segurança, sequências               |
+| `20261008120200_cadastros.sql`                                | fornecedores, locais, centros de custo, checklists versionados, categorias                           |
+| `20261008120300_locacoes_ativos.sql`                          | locações, referências externas, itens, recebimentos, bens, lotes, itens de recebimento               |
+| `20261008120400_eventos.sql`                                  | vistorias, respostas, movimentações, ocorrências, devoluções, itens de devolução, cobranças          |
+| `20261008120500_evidencias_relatorios_auditoria.sql`          | evidências, relatórios, auditoria, auditoria de autenticação, limite de taxa                         |
+| `20261008120600_triggers.sql`                                 | autoria, códigos, guarda de transição, auditoria, imutabilidade, último ADMIN, consistência          |
+| `20261008120700_visoes_saldo.sql`                             | `status_bem_ativo`, `v_saldo_item_locacao`, `v_saldo_locacao` (security_invoker)                     |
+| `20261008120800_rls_privilegios.sql`                          | revogação dos padrões do Supabase, grants por coluna, RLS de todas as tabelas                        |
+| `20261008120900_storage.sql`                                  | buckets privados e policies de leitura                                                               |
+| `20261008121000_usuarios_autenticacao.sql` (Fase 3)           | administração de usuários e auditoria de autenticação                                                |
+| `20261008122000_locacoes_cadastros.sql` (Fase 4)              | pendências/ativação/cancelamento de locação, `buscar_locacoes`, publicar/nova versão de checklist    |
+| `20261008123000_recebimento_vistoria_evidencias.sql` (Fase 5) | recebimento transacional, excesso, descarte/cancelamento, vistoria de entrada, respostas, evidências |
 
 Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `npm run db:types`; o CI falha se estiver desatualizado).
 
@@ -298,19 +299,23 @@ Padrões de performance: `(select auth.uid())` nas policies, índice `usuarios_e
 
 Fluxo de cada requisição autenticada: proxy renova cookies (sem sessão → `/login?next=`) → `(app)/layout.tsx` chama `exigirContexto()` (redireciona para `/login`, `/sem-acesso` ou `/selecionar-empresa`) → página/action verifica permissão → banco aplica RLS com o JWT.
 
-## 7. Storage e evidências [D-07]
+## 7. Storage e evidências [D-07, D-49]
 
-Fluxo de upload (`POST /api/files`, multipart, streaming com limite de bytes):
+Implementação (Fase 5): `src/lib/evidencias/{arquivo,servidor}.ts`, `src/app/api/files/**`.
 
-1. `getContexto()`; Zod nos metadados (`entidade_tipo`, `entidade_id`, `tipo`, `capturada_em`, `lat/long`, `legenda`, `pergunta_id?`).
-2. Autorização: a entidade é lida **com o cliente do usuário** (RLS) → prova que é da empresa do contexto e visível; checa permissão de mutação sobre a entidade e estado que aceita evidência.
-3. Rate limit (`limites_taxa`).
-4. Validação binária: _magic bytes_ (JPEG `FF D8 FF`, PNG `89 50 4E 47`, WebP `RIFF....WEBP`, PDF `%PDF-`), extensão derivada do MIME real, tamanho, tipo permitido por contexto; PDFs com JavaScript/`/Launch` rejeitados (varredura simples) ; imagens decodificadas por `sharp` (rejeita arquivo corrompido/polyglot).
-5. SHA-256 no servidor; path `{empresa_id}/{entidade_tipo}/{entidade_id}/{uuid}.{ext}`.
-6. Upload com cliente **service role isolado em `lib/storage/admin.ts`** (`import 'server-only'`).
-7. `rpc_registrar_evidencia` (JWT do usuário) insere a linha + auditoria; se falhar, remove o objeto (compensação). Job de limpeza de órfãos documentado.
+Upload (`POST /api/files`, multipart):
 
-Download (`GET /api/files/{id}`): lê `evidencias` com cliente do usuário (RLS) → se visível, `createSignedUrl` (5 min) com o cliente do usuário (policy de SELECT em `storage.objects` exige `usuario_pertence_empresa(split_part(name,'/',1)::uuid)`) → redirect 302 com `Cache-Control: no-store`. Nada é persistido.
+1. Sessão exigida pelo proxy (401 sem sessão); origem igual a `NEXT_PUBLIC_APP_URL` (403); `Content-Length` ≤ 20 MB (413).
+2. Zod nos metadados (`entidadeTipo`, `entidadeId`, `tipo`, `perguntaId?`, `substitui?`, `capturadaEm?`, `latitude/longitude?`, `legenda?`).
+3. `rpc_preparar_evidencia` com o JWT do usuário: entidade existe, é da empresa e visível; permissão `evidencia.enviar`; entidade aceita anexo (vistoria em rascunho, linha de recebimento em rascunho, contrato só na locação); devolve os limites da empresa.
+4. Limite por usuário `consumir_limite_taxa('evidencia.upload')` (429).
+5. _Magic bytes_ (JPEG, PNG, WebP, PDF), foto só imagem, PDF com conteúdo ativo recusado, limite da empresa; SHA-256.
+6. Caminho `{empresa_id}/{entidade_tipo}/{entidade_id}/{uuid}.{ext}`; upload com o cliente service role (`src/lib/supabase/admin.ts`).
+7. `rpc_registrar_evidencia` / `rpc_substituir_evidencia` (JWT do usuário) revalida tudo, insere e audita; se falhar, o objeto é removido.
+
+Download (`GET /api/files/{id}`): RLS de `evidencias` → `createSignedUrl` (300 s) com o cliente do usuário (policy de leitura do Storage exige evidência legível) → 302 `no-store`. Nada é persistido. Thumbnails carregam pela própria rota.
+
+Pendências registradas: decodificação de imagem no servidor (polyglot/corrompido) e limpeza periódica de objetos órfãos (só ocorrem se o processo cair entre o upload e o registro).
 
 ## 8. Auditoria
 
