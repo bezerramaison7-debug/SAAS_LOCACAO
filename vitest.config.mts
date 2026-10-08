@@ -32,6 +32,7 @@ export default defineConfig({
         test: {
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
+          globalSetup: ["tests/support/global-setup.ts"],
           environment: "node",
           testTimeout: 30_000,
           fileParallelism: false,
@@ -42,6 +43,7 @@ export default defineConfig({
         test: {
           name: "rls",
           include: ["tests/rls/**/*.test.ts"],
+          globalSetup: ["tests/support/global-setup.ts"],
           environment: "node",
           testTimeout: 30_000,
           fileParallelism: false,

@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { clientEnv } from "@/lib/env/client";
+import type { Database } from "@/types/database";
 import { REQUEST_ID_HEADER } from "@/lib/observability/request-id";
 import { getRequestId } from "@/lib/observability/request-context";
 
@@ -20,7 +21,7 @@ export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
   const requestId = await getRequestId();
 
-  return createServerClient(
+  return createServerClient<Database>(
     clientEnv.NEXT_PUBLIC_SUPABASE_URL,
     clientEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
