@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import { dispositivo, larguraExcedente, ROTAS_MODULOS } from "./helpers";
+import { arquivoSessao } from "./support/usuarios";
+
+test.use({ storageState: arquivoSessao("adminA") });
 
 test.describe("layout responsivo", () => {
   test("nenhuma tela tem rolagem horizontal", async ({ page }) => {

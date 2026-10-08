@@ -13,20 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Valores FICTÍCIOS apenas para build/testes. Os "SENTINEL" permitem detectar
-  # vazamento de segredos no bundle do navegador (scripts/check-bundle-secrets.mjs).
-  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
-  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-  SUPABASE_SERVICE_ROLE_KEY: ci-service-role-SENTINEL-7f3a9c2e
-  REPORT_SIGNING_SECRET: ci-report-secret-SENTINEL-0123456789abcdef
   NEXT_TELEMETRY_DISABLED: "1"
+  # Segredo FICTÍCIO (marcado SENTINEL) para detectar vazamento no bundle.
+  REPORT_SIGNING_SECRET: ci-report-secret-SENTINEL-0123456789abcdef
 
 jobs:
   qualidade:
-    name: Qualidade (formatação, lint, tipos, unit, build, E2E smoke)
+    name: Qualidade (formatação, lint, tipos, unit, build, segredos)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-SENTINEL-7f3a9c2e
     steps:
       - uses: actions/checkout@v4
 
@@ -59,24 +59,13 @@ jobs:
       - name: Nenhum segredo no bundle do navegador
         run: npm run check:bundle-secrets
 
-      - name: Instalar navegadores do Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: E2E smoke (Chromium em 375, 768 e 1280 px)
-        run: npm run e2e
-
-      - name: Relatório do Playwright
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 7
-
-  banco:
-    name: Banco (migrations, seed, integração, RLS, tipos)
+  supabase:
+    name: Supabase (migrations, seed, integração, RLS, tipos, E2E)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
     steps:
       - uses: actions/checkout@v4
 
@@ -88,11 +77,14 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Subir Postgres do Supabase (Docker)
-        run: npx supabase db start
+      - name: Subir Supabase local (Auth, PostgREST, Storage, Mailpit) — aplica migrations + seed
+        run: npx supabase start -x realtime,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
 
-      - name: Aplicar migrations + seed em banco efêmero
-        run: npx supabase db reset --local
+      - name: Exportar chaves do Supabase local
+        run: |
+          eval "$(npx supabase status -o env)"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
 
       - name: Testes de integração
         run: npm run test:integration
@@ -104,6 +96,23 @@ jobs:
         run: |
           npm run db:types
           git diff --exit-code src/types/database.ts
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Instalar navegadores do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (Chromium em 375, 768 e 1280 px)
+        run: npm run e2e
+
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
 
       - name: Parar Supabase
         if: always()

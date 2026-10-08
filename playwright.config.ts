@@ -21,6 +21,7 @@ const viewports = {
 
 const chromium = Object.entries(viewports).map(([nome, viewport]) => ({
   name: `chromium-${nome}`,
+  dependencies: ["setup"],
   use: {
     ...devices["Desktop Chrome"],
     viewport,
@@ -52,7 +53,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [...chromium, ...outrosNavegadores],
+  projects: [
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"], ...(launchOptions ? { launchOptions } : {}) },
+    },
+    ...chromium,
+    ...outrosNavegadores,
+  ],
   ...(process.env.E2E_BASE_URL
     ? {}
     : {

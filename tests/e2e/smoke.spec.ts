@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { arquivoSessao } from "./support/usuarios";
+
+test.use({ storageState: arquivoSessao("adminA") });
 
 test.describe("smoke", () => {
   test("raiz redireciona para o painel", async ({ page }) => {

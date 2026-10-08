@@ -2,6 +2,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { dispositivo } from "./helpers";
+import { arquivoSessao } from "./support/usuarios";
+
+test.use({ storageState: arquivoSessao("adminA") });
 
 for (const tema of ["claro", "escuro"] as const) {
   test(`sem violações sérias de acessibilidade (WCAG A/AA) — tema ${tema}`, async ({
