@@ -121,17 +121,20 @@ describe("seed de demonstração", () => {
            (select count(*) from public.ocorrencias where empresa_id = $1) ocorrencias`,
         [EMPRESA_A],
       );
-      expect(r).toEqual({
+      // Cadastros e locações crescem com os E2E (dados reais): mínimos do seed.
+      expect(r).toMatchObject({
         papeis: "7",
-        fornecedores: "2",
-        locais: "3",
-        centros: "2",
-        status: "ATIVA,EM_DEVOLUCAO,RASCUNHO",
         lotes: "1",
         vistorias: "2",
         movimentacoes: "1",
         ocorrencias: "1",
       });
+      expect(Number(r?.fornecedores)).toBeGreaterThanOrEqual(2);
+      expect(Number(r?.locais)).toBeGreaterThanOrEqual(3);
+      expect(Number(r?.centros)).toBeGreaterThanOrEqual(2);
+      expect(r?.status?.split(",")).toEqual(
+        expect.arrayContaining(["ATIVA", "EM_DEVOLUCAO", "RASCUNHO"]),
+      );
     });
   });
 });

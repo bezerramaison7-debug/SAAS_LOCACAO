@@ -21,6 +21,7 @@ export const ROTAS_MODULOS = [
   "/devolucoes",
   "/cobrancas",
   "/relatorios",
+  "/cadastros",
   "/configuracoes",
 ] as const;
 

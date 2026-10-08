@@ -15,8 +15,8 @@ test.describe("layout responsivo", () => {
   });
 
   test("módulos não entregues informam a fase e não exibem dados nem ações", async ({ page }) => {
-    await page.goto("/locacoes");
-    await expect(page.getByText("Locações: disponível a partir da Fase 4")).toBeVisible();
+    await page.goto("/recebimentos");
+    await expect(page.getByText("Recebimentos: disponível a partir da Fase 5")).toBeVisible();
     await expect(page.locator("main").getByRole("button")).toHaveCount(0);
     await expect(page.locator("main table")).toHaveCount(0);
   });

@@ -179,23 +179,49 @@ describe("cancelamento (RN-14)", () => {
 });
 
 describe("buscar_locacoes", () => {
-  type Linha = { codigo: string; id: string; total: string; pedidos_sectra: string | null };
+  // Os E2E gravam locações reais no mesmo banco: as asserções usam os dados do
+  // seed por inclusão e verificam a propriedade do filtro em todas as linhas.
+  type Linha = {
+    codigo: string;
+    id: string;
+    total: string;
+    status: string;
+    centro_custo: string | null;
+    pedidos_sectra: string | null;
+  };
   const buscar = (ator: string, args: string, params: unknown[]) =>
     comoAtor(usuario(ator), (s) =>
       s.query<Linha>(`select * from public.buscar_locacoes(${args})`, params),
     );
+  /** Percorre todas as páginas (a função limita a 100 por chamada). */
+  const buscarTodas = async (ator: string, args: string, params: unknown[]) => {
+    const todas: Linha[] = [];
+    for (let offset = 0; ; offset += 100) {
+      const pagina = await buscar(ator, `${args}, p_limite => 100, p_offset => ${offset}`, params);
+      todas.push(...pagina);
+      if (pagina.length < 100) return todas;
+    }
+  };
+  const totalEmpresaA = () =>
+    comoAtor(superusuario, async (s) => {
+      const [r] = await s.query<{ n: string }>(
+        "select count(*) n from public.locacoes where empresa_id = $1",
+        [EMPRESA_A],
+      );
+      return Number(r?.n);
+    });
 
   it("lista as locações da empresa ativa com total para paginação", async () => {
-    const r = await buscar(USUARIOS.gestorA, "$1", [EMPRESA_A]);
-    expect(r.map((l) => l.id).sort()).toEqual(
-      [A.locacaoAtiva, A.locacaoEmDevolucao, A.locacaoRascunho].sort(),
+    const total = await totalEmpresaA();
+    const r = await buscarTodas(USUARIOS.gestorA, "$1", [EMPRESA_A]);
+    expect(r.map((l) => l.id)).toEqual(
+      expect.arrayContaining([A.locacaoAtiva, A.locacaoEmDevolucao, A.locacaoRascunho]),
     );
-    expect(r.every((l) => Number(l.total) === 3)).toBe(true);
+    expect(r.every((l) => Number(l.total) === total)).toBe(true);
   });
 
   it.each([
     ["pedido Sectra", "4500012345", [A.locacaoAtiva]],
-    ["fornecedor", "Andaimes Forte", [A.locacaoEmDevolucao]],
     ["número de série do bem", "TS07-1002", [A.locacaoAtiva]],
     ["código da locação", "LOC-000003", [A.locacaoEmDevolucao]],
     ["lote", "LOT-000001", [A.locacaoAtiva]],
@@ -204,30 +230,68 @@ describe("buscar_locacoes", () => {
     expect(r.map((l) => l.id)).toEqual(esperado);
   });
 
+  it("busca por fornecedor", async () => {
+    const r = await buscarTodas(USUARIOS.gestorA, "$1, p_q => $2", [EMPRESA_A, "Andaimes Forte"]);
+    expect(r.map((l) => l.id)).toContain(A.locacaoEmDevolucao);
+    expect(r.map((l) => l.id)).not.toContain(A.locacaoAtiva);
+  });
+
   it("filtra por status, centro de custo, local e término", async () => {
-    const porStatus = await buscar(
+    const porStatus = await buscarTodas(
       USUARIOS.gestorA,
       "$1, p_status => $2::public.status_locacao[]",
       [EMPRESA_A, "{ATIVA,EM_DEVOLUCAO}"],
     );
-    expect(porStatus).toHaveLength(2);
+    expect(porStatus.map((l) => l.id)).toEqual(
+      expect.arrayContaining([A.locacaoAtiva, A.locacaoEmDevolucao]),
+    );
+    expect(porStatus.every((l) => ["ATIVA", "EM_DEVOLUCAO"].includes(l.status))).toBe(true);
+
     const porLocal = await buscar(USUARIOS.gestorA, "$1, p_local => $2", [EMPRESA_A, A.localObra1]);
     expect(porLocal.map((l) => l.id)).toEqual([A.locacaoAtiva]);
-    const porTermino = await buscar(USUARIOS.gestorA, "$1, p_termino_ate => current_date + 7", [
-      EMPRESA_A,
-    ]);
-    expect(porTermino.map((l) => l.id)).toEqual([A.locacaoAtiva]);
-    const porCentro = await buscar(USUARIOS.gestorA, "$1, p_centro_custo => $2", [
+
+    const [hoje] = await comoAtor(superusuario, (s) =>
+      s.query<{ limite: string }>("select (current_date + 7)::text limite"),
+    );
+    const porTermino = await buscarTodas(
+      USUARIOS.gestorA,
+      "$1, p_termino_ate => current_date + 7",
+      [EMPRESA_A],
+    );
+    expect(porTermino.map((l) => l.id)).toContain(A.locacaoAtiva);
+    expect(porTermino.map((l) => l.id)).not.toContain(A.locacaoEmDevolucao);
+    // `date` vem do driver como Date local: compara como texto ISO no próprio banco.
+    const terminos = await comoAtor(usuario(USUARIOS.gestorA), (s) =>
+      s.query<{ termino: string | null }>(
+        "select termino_previsto::text termino from public.buscar_locacoes($1, p_termino_ate => current_date + 7, p_limite => 100)",
+        [EMPRESA_A],
+      ),
+    );
+    const limite = hoje?.limite ?? "";
+    expect(limite).not.toBe("");
+    expect(terminos.every((l) => l.termino !== null && l.termino <= limite)).toBe(true);
+
+    const porCentro = await buscarTodas(USUARIOS.gestorA, "$1, p_centro_custo => $2", [
       EMPRESA_A,
       A.centroCusto1,
     ]);
-    expect(porCentro.map((l) => l.id).sort()).toEqual([A.locacaoAtiva, A.locacaoRascunho].sort());
+    expect(porCentro.map((l) => l.id)).toEqual(
+      expect.arrayContaining([A.locacaoAtiva, A.locacaoRascunho]),
+    );
+    expect(porCentro.map((l) => l.id)).not.toContain(A.locacaoEmDevolucao);
+    expect(porCentro.every((l) => l.centro_custo?.startsWith("CC-1001"))).toBe(true);
   });
 
   it("paginação limita e mantém o total", async () => {
-    const r = await buscar(USUARIOS.gestorA, "$1, p_limite => 2, p_offset => 2", [EMPRESA_A]);
+    const total = await totalEmpresaA();
+    const r = await buscar(USUARIOS.gestorA, "$1, p_limite => 2, p_offset => $2", [
+      EMPRESA_A,
+      total - 1,
+    ]);
     expect(r).toHaveLength(1);
-    expect(Number(r[0]?.total)).toBe(3);
+    expect(Number(r[0]?.total)).toBe(total);
+    const limitado = await buscar(USUARIOS.gestorA, "$1, p_limite => 1000", [EMPRESA_A]);
+    expect(limitado.length).toBeLessThanOrEqual(100);
   });
 
   it("usuário da B que passa o ID da Empresa A recebe zero linhas (RLS)", async () => {
