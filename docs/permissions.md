@@ -151,3 +151,17 @@ Para cada tabela crítica (locacoes, itens_locacao, referencias_externas, recebi
 | Empresa ativa             | Sempre derivada das associações ativas lidas do banco; cookie forjado é ignorado (testado em E2E)                                    |
 
 Provas automatizadas: `tests/e2e/perfis.spec.ts` (8 perfis × 3 viewports), `tests/e2e/isolamento.spec.ts`, `tests/integration/usuarios-admin.test.ts`.
+
+## 9. Cadastros e locações (Fase 4)
+
+| Recurso                                 | Interface/servidor                                                                                                        | Banco                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `/cadastros/**` (consulta)              | `dados.ler_geral` (RESPONSAVEL_LOCAL recebe "não encontrada")                                                             | SELECT por `usuario_pertence_empresa`                                                         |
+| Fornecedor / local / centro / categoria | botões e formulários só com `fornecedor.gerenciar` / `local.gerenciar` / `centro_custo.gerenciar` / `categoria.gerenciar` | INSERT/UPDATE por policy com a mesma permissão; código/modo só na criação (grants por coluna) |
+| Checklists                              | `checklist.gerenciar` (ADMIN, OPERACAO)                                                                                   | perguntas só em rascunho (trigger); `rpc_publicar_checklist`, `rpc_nova_versao_checklist`     |
+| Nova locação / etapas                   | `locacao.criar` / `locacao.editar`; edição só em RASCUNHO                                                                 | policies exigem RASCUNHO + permissão                                                          |
+| Referências Sectra                      | `locacao.referencia.gerenciar`; remover só em RASCUNHO                                                                    | idem (D-41)                                                                                   |
+| Ativar / cancelar                       | `locacao.ativar` / `locacao.cancelar`, com confirmação (e motivo)                                                         | `rpc_ativar_locacao` / `rpc_cancelar_locacao` revalidam tudo                                  |
+| Abas do detalhe                         | D-45 (`valores.ver`, `dados.ler_geral`, `auditoria.ler`)                                                                  | RLS das tabelas de cada aba                                                                   |
+
+Provas: `tests/e2e/{cadastros,locacoes}.spec.ts` (3 viewports), `tests/integration/locacoes.test.ts`.

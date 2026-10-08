@@ -234,3 +234,33 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 3)
 **Decisão:** Login (sucesso/falha), logout, pedido e redefinição de senha são gravados em `privado.auditoria_autenticacao` via `public.registrar_evento_autenticacao` (EXECUTE só para service_role). E-mail e IP só como HMAC-SHA256 com chave derivada de `REPORT_SIGNING_SECRET`; nunca senha ou token. Falha ao auditar não bloqueia o login, mas é logada.
+
+### D-41 — Vínculo manual com o Sectra
+
+**Status:** Aceita (Fase 4)
+**Decisão:** Não existe integração com o Sectra. Compras digita os números (pedido, requisição, solicitação, contrato, NF) em `referencias_externas`; o mesmo documento só pode pertencer a uma locação da empresa (S-02, `unique (empresa_id, sistema, tipo, numero)`), e o pedido de compra do Sectra é obrigatório para ativar. Referências podem ser acrescentadas em locação ativa/em devolução; só são removidas no rascunho.
+
+### D-42 — Locação em etapas com rascunho no servidor
+
+**Status:** Aceita (Fase 4)
+**Decisão:** A identificação cria a locação em `RASCUNHO` (código gerado pelo banco); as demais etapas são `/locacoes/{id}/editar?etapa=…` (referências, itens, vigência, revisão), cada uma salva no servidor. Nada fica só no navegador. Fora do rascunho a edição redireciona ao detalhe; ativação e cancelamento só por `rpc_ativar_locacao`/`rpc_cancelar_locacao` (pendências calculadas por `pendencias_ativacao_locacao`, a mesma função usada na tela de revisão).
+
+### D-43 — Transporte de valores decimais
+
+**Status:** Aceita (Fase 4)
+**Decisão:** Leitura de `numeric` sempre com `::text` no select (sem passar por `number`). Entrada em pt-BR (`1.234,56`, `10,5`) convertida por `parseMoedaBR`/`parseQuantidadeBR` para string decimal; o envio ao PostgREST usa `decimalParaJson`, que recusa qualquer valor cuja conversão para número JSON não seja exata (limites de `numeric(14,2)`/`numeric(14,3)` validados antes). Colunas preenchidas por trigger (`codigo`, `modo_controle`) são omitidas no tipo de inserção por `insercaoComGerados` em um único ponto.
+
+### D-44 — Busca de locações por função SQL com RLS de quem consulta
+
+**Status:** Aceita (Fase 4)
+**Decisão:** `public.buscar_locacoes` (`security invoker`, `stable`) filtra por termo (código, referência, fornecedor, bem, lote), situação, fornecedor, centro de custo, local atual dos bens, período e término, com paginação (máx. 100) e total por `count(*) over ()`. Filtros vivem na URL (GET, compartilháveis, sem JS); valores inválidos voltam ao padrão. O termo é tratado como literal (curingas do ILIKE escapados). Termo "vence em até N dias" considera só ATIVA/EM_DEVOLUCAO quando não há filtro de situação.
+
+### D-45 — Detalhe com abas por URL e por permissão
+
+**Status:** Aceita (Fase 4)
+**Decisão:** Abas são links `?aba=…` (sem estado no cliente). Itens, bens/lotes, movimentações e cobranças exigem `valores.ver` (a RLS de `itens_locacao`/`cobrancas` já exige); recebimentos, documentos e devoluções `dados.ler_geral`; histórico `auditoria.ler` (auditoria da locação e dos filhos por `locacao_id` no snapshot). Aba pedida sem permissão volta ao Resumo. Ações aparecem só quando executáveis (nenhum botão sem ação).
+
+### D-46 — Aditivo e anexo de contrato adiados (P1)
+
+**Status:** Aceita (Fase 4)
+**Decisão:** F4.7 (aditivo de itens em locação ativa, D-14) e F4.8 (anexo de contrato/pedido) não entram no gate da Fase 4. O anexo depende da Storage API (Fase 5); o aditivo exige `rpc_aditivo_item` com motivo. Ambos ficam registrados como pendências; a aba "Documentos" já lista anexos da locação quando existirem.

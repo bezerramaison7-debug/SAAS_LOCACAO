@@ -2,7 +2,7 @@
 
 MicroSaaS web, multiempresa, para rastrear equipamentos locados **depois** do pedido de compra feito no Sectra: recebimento, vistoria fotográfica, localização, responsável, movimentações, ocorrências, devolução, encerramento de cobrança e relatório em PDF.
 
-> **Estado:** Fase 3 (autenticação e usuários) concluída: login, logout, recuperação de senha, empresa ativa, permissões no servidor e administração de usuários. Módulos de negócio a partir da Fase 4 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+> **Estado:** Fase 4 (cadastros e locações) concluída: cadastros com busca e paginação, checklists versionados, locação em etapas com vínculo manual ao Sectra, itens individuais/lote, ativação/cancelamento, lista filtrável e detalhe com abas. Recebimentos e vistorias a partir da Fase 5 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 
 ## Requisitos
 
@@ -83,7 +83,7 @@ Depois de alterar migrations: `npm run db:types` (atualiza `src/types/database.t
 ```
 src/app            rotas (App Router); (app)/ = telas autenticadas
 src/components     ui/ (design system), forms/, tables/, layout/, domain/
-src/features       módulos de domínio (a partir da Fase 4)
+src/features       módulos de domínio (cadastros, locações, usuários…)
 src/lib            env, supabase, observability, security, format, validation
 src/proxy.ts       request id, CSP com nonce, renovação de sessão
 supabase/          config.toml, migrations/, seed.sql, tests/bootstrap-local.sql
