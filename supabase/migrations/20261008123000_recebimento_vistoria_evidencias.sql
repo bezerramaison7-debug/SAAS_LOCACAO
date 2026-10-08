@@ -744,6 +744,49 @@ begin
 end
 $$;
 
+-- Grava as respostas de uma vistoria em rascunho numa única transação:
+-- {pergunta_id: valor} — valor null remove a resposta. Tipos validados por trigger.
+create function public.rpc_salvar_respostas_vistoria(p_vistoria uuid, p_respostas jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v public.vistorias;
+  r record;
+begin
+  select * into v from public.vistorias where id = p_vistoria for update;
+  if not found or not privado.usuario_pertence_empresa(v.empresa_id)
+     or not (privado.pode_ler(v.empresa_id) or privado.ve_bem(v.bem_id) or privado.ve_lote(v.lote_id)) then
+    raise exception 'Vistoria não encontrada' using errcode = 'P0002';
+  end if;
+  if not privado.usuario_tem_permissao(v.empresa_id, 'vistoria.registrar') then
+    raise exception 'Sem permissão para registrar vistorias' using errcode = '42501';
+  end if;
+  if v.status <> 'RASCUNHO' then
+    raise exception 'Vistoria concluída não pode ser alterada' using errcode = '22023';
+  end if;
+  if jsonb_typeof(p_respostas) <> 'object' then
+    raise exception 'Respostas inválidas' using errcode = '22023';
+  end if;
+  for r in select key::uuid as pergunta, value from jsonb_each(p_respostas) loop
+    if not exists (select 1 from public.perguntas_checklist p where p.id = r.pergunta and p.modelo_id = v.modelo_id) then
+      raise exception 'Pergunta não pertence ao checklist da vistoria' using errcode = '22023';
+    end if;
+    if jsonb_typeof(r.value) = 'null' then
+      delete from public.respostas_vistoria where vistoria_id = v.id and pergunta_id = r.pergunta;
+    else
+      insert into public.respostas_vistoria (empresa_id, vistoria_id, pergunta_id, resposta_json)
+      values (v.empresa_id, v.id, r.pergunta, r.value)
+      on conflict (vistoria_id, pergunta_id)
+      do update set resposta_json = excluded.resposta_json
+      where public.respostas_vistoria.resposta_json is distinct from excluded.resposta_json;
+    end if;
+  end loop;
+end
+$$;
+
 -- ------------------------------------------------------------- evidências ---
 -- Regras de anexação (RN-92): permissão, mesma empresa, acesso à entidade e
 -- entidade ainda aberta quando o anexo faz parte de um registro em edição.
@@ -980,6 +1023,7 @@ revoke all on function
   public.rpc_definir_lote_recebimento(uuid, uuid, numeric, public.condicao_item, text),
   public.rpc_remover_linha_recebimento(uuid),
   public.rpc_iniciar_vistoria_entrada(uuid),
+  public.rpc_salvar_respostas_vistoria(uuid, jsonb),
   public.rpc_preparar_evidencia(public.entidade_evidencia, uuid, public.tipo_evidencia, uuid),
   public.rpc_registrar_evidencia(public.entidade_evidencia, uuid, public.tipo_evidencia, text, text, bigint, text,
                                  text, timestamptz, numeric, numeric, text, uuid),
@@ -999,6 +1043,7 @@ grant execute on function
   public.rpc_definir_lote_recebimento(uuid, uuid, numeric, public.condicao_item, text),
   public.rpc_remover_linha_recebimento(uuid),
   public.rpc_iniciar_vistoria_entrada(uuid),
+  public.rpc_salvar_respostas_vistoria(uuid, jsonb),
   public.rpc_preparar_evidencia(public.entidade_evidencia, uuid, public.tipo_evidencia, uuid),
   public.rpc_registrar_evidencia(public.entidade_evidencia, uuid, public.tipo_evidencia, text, text, bigint, text,
                                  text, timestamptz, numeric, numeric, text, uuid),

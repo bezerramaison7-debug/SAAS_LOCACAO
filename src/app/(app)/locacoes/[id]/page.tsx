@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { PackageCheck, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -54,6 +54,12 @@ export default async function LocacaoPage({ params, searchParams }: PageProps<"/
             <Button asChild variante="primaria">
               <Link href={`/locacoes/${locacao.id}/editar?etapa=revisao`}>
                 <Pencil aria-hidden /> Continuar preenchimento
+              </Link>
+            </Button>
+          ) : locacao.status === "ATIVA" && pode(contexto, "recebimento.registrar") ? (
+            <Button asChild variante="primaria">
+              <Link href={`/recebimentos/novo?locacao=${locacao.id}`}>
+                <PackageCheck aria-hidden /> Registrar recebimento
               </Link>
             </Button>
           ) : undefined

@@ -8,6 +8,7 @@ import { type TablesInsert } from "@/types/database";
  */
 type Gerados = {
   locacoes: "codigo";
+  recebimentos: "codigo";
   itens_locacao: "modo_controle";
 };
 

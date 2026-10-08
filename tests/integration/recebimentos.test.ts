@@ -428,6 +428,50 @@ describe("vistoria: respostas e checklist versionado (RN-81..RN-83)", () => {
     });
   });
 
+  it("rpc_salvar_respostas_vistoria grava, substitui e remove respostas; concluída é imutável", async () => {
+    await comoAtor(operacao, async (s) => {
+      const id = await novoRascunho(s);
+      await s.query("select public.rpc_definir_lote_recebimento($1, $2, 5)", [id, A.itemAndaime]);
+      const [v] = await s.query<{ id: string }>(
+        "select public.rpc_iniciar_vistoria_entrada($1) id",
+        [await linhaDoLote(s, id)],
+      );
+      const perguntas = await s.query<{ id: string }>(
+        "select p.id from public.perguntas_checklist p join public.vistorias v on v.modelo_id = p.modelo_id where v.id = $1 order by p.ordem",
+        [v?.id],
+      );
+      const [p1, p2] = perguntas.map((p) => p.id);
+      const salvar = (r: object) =>
+        s.tentar("select public.rpc_salvar_respostas_vistoria($1, $2::jsonb)", [
+          v?.id,
+          JSON.stringify(r),
+        ]);
+      expect((await salvar({ [p1 as string]: "CONFORME", [p2 as string]: "SIM" })).ok).toBe(true);
+      expect((await salvar({ [p1 as string]: "NAO_CONFORME", [p2 as string]: null })).ok).toBe(
+        true,
+      );
+      const atuais = await s.query<{ pergunta_id: string; r: string }>(
+        "select pergunta_id, resposta_json #>> '{}' r from public.respostas_vistoria where vistoria_id = $1",
+        [v?.id],
+      );
+      expect(atuais).toEqual([{ pergunta_id: p1, r: "NAO_CONFORME" }]);
+      const invalida = await salvar({ [p2 as string]: "TALVEZ" });
+      expect(invalida.ok).toBe(false);
+      const outra = await salvar({ [A.pergunta1]: "SIM", [randomUUID()]: "SIM" });
+      expect(outra.ok).toBe(false);
+
+      await s.como(compras);
+      const semPermissao = await salvar({ [p1 as string]: "CONFORME" });
+      expect(semPermissao.ok).toBe(false);
+      await s.como(operacao);
+      const concluida = await s.tentar(
+        "select public.rpc_salvar_respostas_vistoria($1, '{}'::jsonb)",
+        [A.vistoriaBem1],
+      );
+      expect(concluida.ok).toBe(false);
+    });
+  });
+
   it("vistoria usa a versão publicada vigente no momento em que é iniciada", async () => {
     await comoAtor(operacao, async (s) => {
       const [nova] = await s.query<{ id: string }>(

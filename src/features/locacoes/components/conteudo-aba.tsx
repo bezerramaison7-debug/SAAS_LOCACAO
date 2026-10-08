@@ -8,10 +8,13 @@ import {
   Undo2,
 } from "lucide-react";
 
+import Link from "next/link";
+
 import { DataTable } from "@/components/tables/data-table";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { EnviarArquivo } from "@/features/evidencias/components/enviar-arquivo";
 import { pode } from "@/lib/auth/autorizacao";
 import { type Contexto } from "@/lib/auth/contexto";
 import { formatarDataCivil, formatarDataHora } from "@/lib/format/datas";
@@ -154,7 +157,14 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
               chave: "codigo",
               titulo: "Recebimento",
               principal: true,
-              render: (r) => <span className="font-mono font-medium">{r.codigo}</span>,
+              render: (r) => (
+                <Link
+                  href={`/recebimentos/${r.id}`}
+                  className="font-mono font-medium text-primaria hover:underline"
+                >
+                  {r.codigo}
+                </Link>
+              ),
             },
             {
               chave: "status",
@@ -193,7 +203,14 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
                 chave: "codigo",
                 titulo: "Bem",
                 principal: true,
-                render: (b) => <span className="font-mono font-medium">{b.codigo}</span>,
+                render: (b) => (
+                  <Link
+                    href={`/bens/${b.id}`}
+                    className="font-mono font-medium text-primaria hover:underline"
+                  >
+                    {b.codigo}
+                  </Link>
+                ),
               },
               { chave: "item", titulo: "Item", render: (b) => b.item },
               { chave: "ident", titulo: "Série/placa", render: (b) => b.identificacao ?? "—" },
@@ -221,7 +238,14 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
                 chave: "codigo",
                 titulo: "Lote",
                 principal: true,
-                render: (l) => <span className="font-mono font-medium">{l.codigo}</span>,
+                render: (l) => (
+                  <Link
+                    href={`/bens/lotes/${l.id}`}
+                    className="font-mono font-medium text-primaria hover:underline"
+                  >
+                    {l.codigo}
+                  </Link>
+                ),
               },
               { chave: "item", titulo: "Item", render: (l) => l.item },
               {
@@ -286,34 +310,69 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
 
     case "evidencias": {
       const linhas = await evidenciasDaLocacao(contexto, locacao.id);
+      const podeEnviar = pode(contexto, "evidencia.enviar");
       return (
-        <DataTable
-          legenda="Documentos da locação"
-          linhas={linhas}
-          chaveLinha={(e) => e.id}
-          vazio={
-            <EmptyState
-              icone={FileText}
-              titulo="Nenhum documento anexado"
-              descricao="Contrato e aditivos anexados à locação aparecem aqui (envio de arquivos: Fase 5)."
-            />
-          }
-          colunas={[
-            {
-              chave: "nome",
-              titulo: "Arquivo",
-              principal: true,
-              render: (e) => <span className="font-medium break-all">{e.nome}</span>,
-            },
-            { chave: "tipo", titulo: "Tipo", render: (e) => rotulo(ROTULO_TIPO_EVIDENCIA, e.tipo) },
-            { chave: "enviada", titulo: "Enviado em", render: (e) => dataHora(e.enviadaEm) },
-            {
-              chave: "status",
-              titulo: "Situação",
-              render: (e) => <Badge>{rotulo(ROTULO_STATUS_EVIDENCIA, e.status)}</Badge>,
-            },
-          ]}
-        />
+        <div className="space-y-4">
+          {podeEnviar ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <EnviarArquivo
+                entidadeTipo="LOCACAO"
+                entidadeId={locacao.id}
+                tipo="CONTRATO"
+                rotulo="Anexar contrato"
+              />
+              <EnviarArquivo
+                entidadeTipo="LOCACAO"
+                entidadeId={locacao.id}
+                tipo="DOCUMENTO"
+                rotulo="Anexar outro documento"
+              />
+            </div>
+          ) : null}
+          <DataTable
+            legenda="Documentos da locação"
+            linhas={linhas}
+            chaveLinha={(e) => e.id}
+            vazio={
+              <EmptyState
+                icone={FileText}
+                titulo="Nenhum documento anexado"
+                descricao="Contrato, pedido assinado e aditivos (PDF ou imagem, privados)."
+              />
+            }
+            colunas={[
+              {
+                chave: "nome",
+                titulo: "Arquivo",
+                principal: true,
+                render: (e) =>
+                  e.status === "ATIVA" ? (
+                    <a
+                      href={`/api/files/${e.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium break-all text-primaria hover:underline"
+                    >
+                      {e.nome}
+                    </a>
+                  ) : (
+                    <span className="font-medium break-all">{e.nome}</span>
+                  ),
+              },
+              {
+                chave: "tipo",
+                titulo: "Tipo",
+                render: (e) => rotulo(ROTULO_TIPO_EVIDENCIA, e.tipo),
+              },
+              { chave: "enviada", titulo: "Enviado em", render: (e) => dataHora(e.enviadaEm) },
+              {
+                chave: "status",
+                titulo: "Situação",
+                render: (e) => <Badge>{rotulo(ROTULO_STATUS_EVIDENCIA, e.status)}</Badge>,
+              },
+            ]}
+          />
+        </div>
       );
     }
 

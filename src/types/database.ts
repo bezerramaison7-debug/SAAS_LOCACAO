@@ -2473,6 +2473,10 @@ export type Database = {
         Returns: undefined;
       };
       rpc_remover_linha_recebimento: { Args: { p_linha: string }; Returns: undefined };
+      rpc_salvar_respostas_vistoria: {
+        Args: { p_respostas: Json; p_vistoria: string };
+        Returns: undefined;
+      };
       rpc_substituir_evidencia: {
         Args: {
           p_antiga: string;
