@@ -26,4 +26,10 @@ describe("CSP", () => {
     expect(csp).toContain("ws:");
     expect(csp).toContain("http://127.0.0.1:54321");
   });
+
+  it("produção com Supabase em http (local/CI) não força https nas URLs assinadas", () => {
+    const csp = montarCsp({ nonce: "n", supabaseUrl: "http://127.0.0.1:54321", dev: false });
+    expect(csp).not.toContain("upgrade-insecure-requests");
+    expect(csp).toContain("img-src 'self' blob: data: http://127.0.0.1:54321");
+  });
 });

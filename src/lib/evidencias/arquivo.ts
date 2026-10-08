@@ -64,6 +64,17 @@ export const BUCKET: Record<TipoEvidencia, "evidencias" | "contratos" | "comprov
 
 export type Limites = { imagemBytes: number; pdfBytes: number };
 
+/**
+ * PDF com conteúdo ativo (JavaScript, ação de abrir programa, arquivo embutido
+ * ou mídia) é recusado. Varredura simples dos tokens no arquivo: não cobre
+ * fluxos comprimidos que escondam esses nomes — limitação documentada.
+ */
+const TOKENS_PDF_ATIVO = /\/(JavaScript|JS|Launch|EmbeddedFile|RichMedia|XFA)\b/;
+
+export function pdfTemConteudoAtivo(bytes: Uint8Array): boolean {
+  return TOKENS_PDF_ATIVO.test(new TextDecoder("latin1").decode(bytes));
+}
+
 export type ResultadoValidacao =
   { ok: true; mime: MimeEvidencia; extensao: string } | { ok: false; erro: string };
 
@@ -77,6 +88,9 @@ export function validarArquivo(
   if (!mime) return { ok: false, erro: "Formato não aceito. Envie JPG, PNG, WEBP ou PDF." };
   if (!mimesPermitidos(tipo).includes(mime)) {
     return { ok: false, erro: "Para fotos, envie uma imagem (JPG, PNG ou WEBP)." };
+  }
+  if (mime === "application/pdf" && pdfTemConteudoAtivo(bytes)) {
+    return { ok: false, erro: "PDF com conteúdo ativo (scripts ou anexos) não é aceito." };
   }
   const limite = Math.min(
     mime === "application/pdf" ? limites.pdfBytes : limites.imagemBytes,

@@ -247,8 +247,14 @@ describe("buscar_locacoes", () => {
     );
     expect(porStatus.every((l) => ["ATIVA", "EM_DEVOLUCAO"].includes(l.status))).toBe(true);
 
-    const porLocal = await buscar(USUARIOS.gestorA, "$1, p_local => $2", [EMPRESA_A, A.localObra1]);
-    expect(porLocal.map((l) => l.id)).toEqual([A.locacaoAtiva]);
+    // OBRA-001: bem ativo da locação ativa; a locação em devolução está na OBRA-002.
+    const porLocal = await buscarTodas(USUARIOS.gestorA, "$1, p_local => $2", [
+      EMPRESA_A,
+      A.localObra1,
+    ]);
+    expect(porLocal.map((l) => l.id)).toContain(A.locacaoAtiva);
+    expect(porLocal.map((l) => l.id)).not.toContain(A.locacaoEmDevolucao);
+    expect(porLocal.map((l) => l.id)).not.toContain(A.locacaoRascunho);
 
     const [hoje] = await comoAtor(superusuario, (s) =>
       s.query<{ limite: string }>("select (current_date + 7)::text limite"),

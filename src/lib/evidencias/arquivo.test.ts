@@ -55,6 +55,22 @@ describe("validarArquivo", () => {
     ).toBe(false);
   });
 
+  it("rejeita PDF com JavaScript ou ação de execução", () => {
+    for (const ativo of [
+      "/JavaScript (app.alert(1))",
+      "/JS (x)",
+      "/Launch <<>>",
+      "/EmbeddedFile 3 0 R",
+    ]) {
+      const pdf = new TextEncoder().encode(
+        `%PDF-1.7\n1 0 obj<< /OpenAction << ${ativo} >> >>endobj`,
+      );
+      expect(validarArquivo(pdf, "DOCUMENTO", LIMITES), ativo).toMatchObject({ ok: false });
+    }
+    const comum = new TextEncoder().encode("%PDF-1.7\n1 0 obj<< /Type /Catalog /JSON 1 >>endobj");
+    expect(validarArquivo(comum, "DOCUMENTO", LIMITES).ok).toBe(true);
+  });
+
   it("rejeita arquivo vazio", () => {
     expect(validarArquivo(new Uint8Array(), "FOTO", LIMITES)).toEqual({
       ok: false,

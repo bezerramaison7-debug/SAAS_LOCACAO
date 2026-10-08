@@ -87,6 +87,12 @@ test.describe("Operação — recebimento completo (gate da Fase 5)", () => {
     await expect(campo).toHaveAttribute("capture", "environment");
     await campo.setInputFiles(foto("avaria.jpg"));
     await expect(fotosBem.locator("img")).toBeVisible();
+    // A miniatura carrega de fato (URL assinada aceita pela CSP e imagem decodificada).
+    await expect
+      .poll(() =>
+        fotosBem.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0),
+      )
+      .toBe(true);
     await semEstouro(page, "fotos");
 
     // Arquivo que não é imagem é recusado pelo conteúdo, não pela extensão.

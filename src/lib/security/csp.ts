@@ -40,6 +40,10 @@ export function montarCsp({ nonce, supabaseUrl, dev }: OpcoesCsp): string {
     "frame-ancestors": ["'none'"],
   };
   const politica = Object.entries(diretivas).map(([nome, fontes]) => `${nome} ${fontes.join(" ")}`);
-  if (!dev) politica.push("upgrade-insecure-requests");
+  // Só faz sentido (e só é seguro) quando o Supabase é servido em HTTPS: com o
+  // Supabase local em http, o navegador "promoveria" as URLs assinadas para
+  // https e a CSP bloquearia as fotos.
+  if (!dev && new URL(supabaseUrl).protocol === "https:")
+    politica.push("upgrade-insecure-requests");
   return politica.join("; ");
 }

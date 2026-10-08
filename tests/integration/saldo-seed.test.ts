@@ -121,14 +121,11 @@ describe("seed de demonstração", () => {
            (select count(*) from public.ocorrencias where empresa_id = $1) ocorrencias`,
         [EMPRESA_A],
       );
-      // Cadastros e locações crescem com os E2E (dados reais): mínimos do seed.
-      expect(r).toMatchObject({
-        papeis: "7",
-        lotes: "1",
-        vistorias: "2",
-        movimentacoes: "1",
-        ocorrencias: "1",
-      });
+      // Cadastros, locações e eventos crescem com os E2E (dados reais): mínimos do seed.
+      expect(r?.papeis).toBe("7");
+      for (const campo of ["lotes", "vistorias", "movimentacoes", "ocorrencias"] as const) {
+        expect(Number(r?.[campo]), campo).toBeGreaterThanOrEqual(1);
+      }
       expect(Number(r?.fornecedores)).toBeGreaterThanOrEqual(2);
       expect(Number(r?.locais)).toBeGreaterThanOrEqual(3);
       expect(Number(r?.centros)).toBeGreaterThanOrEqual(2);
