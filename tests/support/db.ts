@@ -116,4 +116,6 @@ export const SQLSTATE = {
   violacaoUnique: "23505",
   violacaoFk: "23503",
   violacaoNotNull: "23502",
+  naoEncontrado: "P0002",
+  parametroInvalido: "22023",
 } as const;

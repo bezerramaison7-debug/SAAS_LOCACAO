@@ -2136,6 +2136,7 @@ export type Database = {
           evento_origem_id: string | null;
           evento_origem_tipo: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id: string;
+          item_recebimento_id: string | null;
           lote_id: string | null;
           modelo_id: string;
           observacao: string | null;
@@ -2157,6 +2158,7 @@ export type Database = {
           evento_origem_id?: string | null;
           evento_origem_tipo?: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id?: string;
+          item_recebimento_id?: string | null;
           lote_id?: string | null;
           modelo_id: string;
           observacao?: string | null;
@@ -2177,6 +2179,7 @@ export type Database = {
           evento_origem_id?: string | null;
           evento_origem_tipo?: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id?: string;
+          item_recebimento_id?: string | null;
           lote_id?: string | null;
           modelo_id?: string;
           observacao?: string | null;
@@ -2221,6 +2224,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "usuarios_empresa";
             referencedColumns: ["empresa_id", "user_id"];
+          },
+          {
+            foreignKeyName: "vistorias_item_recebimento_fk";
+            columns: ["empresa_id", "item_recebimento_id"];
+            isOneToOne: false;
+            referencedRelation: "itens_recebimento";
+            referencedColumns: ["empresa_id", "id"];
           },
         ];
       };
@@ -2338,7 +2348,19 @@ export type Database = {
         }[];
       };
       consumir_limite_taxa: { Args: { p_acao: string }; Returns: boolean };
+      excesso_recebimento: {
+        Args: { p_recebimento: string };
+        Returns: {
+          agora: string;
+          contratada: string;
+          descricao: string;
+          excesso: string;
+          item_locacao_id: string;
+          ja_recebida: string;
+        }[];
+      };
       pendencias_ativacao_locacao: { Args: { p_locacao: string }; Returns: string[] };
+      pendencias_recebimento: { Args: { p_recebimento: string }; Returns: string[] };
       registrar_evento_autenticacao: {
         Args: {
           p_email_hash?: string;
@@ -2350,16 +2372,55 @@ export type Database = {
         };
         Returns: undefined;
       };
+      rpc_adicionar_bem_recebimento: {
+        Args: {
+          p_condicao?: Database["public"]["Enums"]["condicao_item"];
+          p_identificacao_fornecedor?: string;
+          p_item_locacao: string;
+          p_numero_serie?: string;
+          p_observacao?: string;
+          p_placa?: string;
+          p_recebimento: string;
+        };
+        Returns: string;
+      };
       rpc_alterar_papel: {
         Args: { p_associacao: string; p_papel: Database["public"]["Enums"]["papel_usuario"] };
         Returns: undefined;
       };
       rpc_ativar_locacao: { Args: { p_locacao: string }; Returns: undefined };
+      rpc_autorizar_excesso: {
+        Args: { p_justificativa: string; p_recebimento: string };
+        Returns: undefined;
+      };
       rpc_cancelar_locacao: { Args: { p_locacao: string; p_motivo: string }; Returns: undefined };
+      rpc_cancelar_recebimento_confirmado: {
+        Args: { p_motivo: string; p_recebimento: string };
+        Returns: undefined;
+      };
+      rpc_confirmar_recebimento: {
+        Args: { p_recebimento: string };
+        Returns: Database["public"]["Enums"]["status_recebimento"];
+      };
+      rpc_definir_lote_recebimento: {
+        Args: {
+          p_condicao?: Database["public"]["Enums"]["condicao_item"];
+          p_item_locacao: string;
+          p_observacao?: string;
+          p_quantidade: number;
+          p_recebimento: string;
+        };
+        Returns: undefined;
+      };
       rpc_definir_usuario_ativo: {
         Args: { p_associacao: string; p_ativo: boolean; p_motivo: string };
         Returns: undefined;
       };
+      rpc_descartar_recebimento: {
+        Args: { p_motivo: string; p_recebimento: string };
+        Returns: undefined;
+      };
+      rpc_iniciar_vistoria_entrada: { Args: { p_linha: string }; Returns: string };
       rpc_listar_usuarios_empresa: {
         Args: { p_empresa: string };
         Returns: {
@@ -2374,7 +2435,59 @@ export type Database = {
         }[];
       };
       rpc_nova_versao_checklist: { Args: { p_modelo: string }; Returns: string };
+      rpc_preparar_evidencia: {
+        Args: {
+          p_entidade_id: string;
+          p_entidade_tipo: Database["public"]["Enums"]["entidade_evidencia"];
+          p_pergunta?: string;
+          p_tipo: Database["public"]["Enums"]["tipo_evidencia"];
+        };
+        Returns: {
+          empresa_id: string;
+          limite_imagem_bytes: number;
+          limite_pdf_bytes: number;
+        }[];
+      };
       rpc_publicar_checklist: { Args: { p_modelo: string }; Returns: undefined };
+      rpc_reabrir_recebimento: { Args: { p_recebimento: string }; Returns: undefined };
+      rpc_registrar_evidencia: {
+        Args: {
+          p_capturada_em?: string;
+          p_entidade_id: string;
+          p_entidade_tipo: Database["public"]["Enums"]["entidade_evidencia"];
+          p_hash: string;
+          p_latitude?: number;
+          p_legenda?: string;
+          p_longitude?: number;
+          p_mime_type: string;
+          p_nome_original?: string;
+          p_pergunta?: string;
+          p_storage_path: string;
+          p_tamanho_bytes: number;
+          p_tipo: Database["public"]["Enums"]["tipo_evidencia"];
+        };
+        Returns: string;
+      };
+      rpc_remover_evidencia: {
+        Args: { p_evidencia: string; p_motivo: string };
+        Returns: undefined;
+      };
+      rpc_remover_linha_recebimento: { Args: { p_linha: string }; Returns: undefined };
+      rpc_substituir_evidencia: {
+        Args: {
+          p_antiga: string;
+          p_capturada_em?: string;
+          p_hash: string;
+          p_latitude?: number;
+          p_legenda?: string;
+          p_longitude?: number;
+          p_mime_type: string;
+          p_nome_original?: string;
+          p_storage_path: string;
+          p_tamanho_bytes: number;
+        };
+        Returns: string;
+      };
       rpc_vincular_usuario: {
         Args: {
           p_email: string;
