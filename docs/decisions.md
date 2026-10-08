@@ -177,3 +177,33 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 1)
 **Decisão:** Pilha de fontes do sistema operacional, sem download de fontes externas (sem dependência de Google Fonts no build, CSP `font-src 'self'`).
+
+### D-30 — Esquema `privado` para funções e tabelas internas
+
+**Status:** Aceita (Fase 2)
+**Decisão:** Funções de segurança/trigger e tabelas internas (`transicoes`, `papel_permissoes`, `sequencias`, `limites_*`, `auditoria_autenticacao`) ficam em `privado`, que não é exposto pelo PostgREST. `authenticated` tem apenas USAGE e EXECUTE nas funções usadas por policies. `public.usuario_pertence_empresa` existe como wrapper exigido pela especificação. Revogação de EXECUTE para PUBLIC é feita explicitamente e no padrão **global** (privilégios padrão por esquema só acrescentam).
+
+### D-31 — DELETE apenas de linhas de rascunho
+
+**Status:** Aceita (Fase 2)
+**Decisão:** `authenticated` só tem DELETE em linhas-filhas enquanto o documento-pai está em rascunho: referências externas e itens (locação RASCUNHO), perguntas (checklist RASCUNHO), itens de recebimento, respostas de vistoria e itens de devolução (pai RASCUNHO). Registros operacionais nunca são apagados; a auditoria registra inclusive essas exclusões de rascunho.
+
+### D-32 — Testes de RLS/integração simulando o PostgREST em SQL
+
+**Status:** Aceita (Fase 2)
+**Decisão:** Testes conectam via `pg`, abrem transação, aplicam `set local role` e `request.jwt.claims` e sempre fazem rollback. Assim rodam tanto no Postgres local com camada de compatibilidade (sem Docker) quanto no Supabase CLI do CI, sem depender da API HTTP. Testes da API HTTP do Storage/Auth entram nas fases 3 e 5.
+
+### D-33 — Lote criado na confirmação do recebimento
+
+**Status:** Aceita (Fase 2)
+**Decisão:** Durante o rascunho, itens de LOTE têm apenas quantidade em `itens_recebimento`; o lote (com local/responsável obrigatórios) nasce na confirmação transacional e é vinculado (`lote_id`). Bens individuais nascem no rascunho como `AGUARDANDO_RECEBIMENTO` (permite fotografar a identificação antes de confirmar).
+
+### D-34 — Health: vivacidade × prontidão
+
+**Status:** Aceita (Fase 2)
+**Decisão:** `/api/health` responde vivacidade; `/api/health?profundo=1` verifica o Supabase pelo endpoint público de saúde do Auth (503 se indisponível), sem expor detalhes nem usar service role.
+
+### D-35 — Integridade entre tabelas por triggers de leitura (security definer)
+
+**Status:** Aceita (Fase 2)
+**Decisão:** Regras que cruzam tabelas e não cabem em FK (modo de controle do item, mesma locação, alvo da ocorrência, modelo publicado, entidade da evidência) são validadas por triggers `security definer` que apenas leem — para que a RLS de quem grava não produza falso negativo. Fluxos (confirmar, devolver, encerrar) continuam nas funções de domínio.

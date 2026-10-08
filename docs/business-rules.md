@@ -181,7 +181,9 @@ O sistema é uma **camada de evidência e de estado operacional**: cada resposta
 
 ## 4. Máquinas de estado
 
-Regra geral: **nenhuma tela ou chamada escreve status livremente**. Coluna `status` não é atualizável pelo papel `authenticated` (privilégio de coluna revogado); só funções de domínio a alteram, e um trigger `validar_transicao_*` rejeita qualquer transição fora da tabela abaixo, mesmo vinda de função **[D-04]**. As mesmas tabelas existem em TypeScript (`src/features/*/rules/state-machine.ts`) para a UI decidir o que mostrar, e um teste de paridade compara as duas.
+Regra geral: **nenhuma tela ou chamada escreve status livremente**. Coluna `status` não é atualizável pelo papel `authenticated` (privilégio de coluna revogado); só funções de domínio a alteram, e o trigger `privado.guardar_transicao` rejeita qualquer transição fora da tabela `privado.transicoes`, mesmo vinda de função ou do superusuário **[D-04]**.
+
+**Fonte de verdade:** `supabase/migrations/20261008120000_fundacao_tipos.sql` (tabela `privado.transicoes`). Cópia TypeScript em `src/features/*/rules/maquina-estado.ts`; o teste `tests/integration/paridade.test.ts` falha se divergirem. Os diagramas abaixo são explicativos; em caso de dúvida, vale a tabela.
 
 ### 4.1 Locação (`locacoes.status`)
 
@@ -233,7 +235,21 @@ EM_USO | DISPONIVEL ──ocorrência defeito/avaria──▶ EM_MANUTENCAO ─�
 {DISPONIVEL, EM_USO, EM_TRANSFERENCIA, EM_MANUTENCAO, DEVOLUCAO_SOLICITADA} ──ocorrência EXTRAVIO──▶ EXTRAVIADO
 EXTRAVIADO ──resolvida ENCONTRADO──▶ (estado anterior) | ──resolvida INDENIZADO──▶ *BAIXADO*
 {DISPONIVEL, EM_USO, EM_MANUTENCAO} ──troca──▶ *SUBSTITUIDO*
+{DISPONIVEL, EM_USO} ──cancelamento de recebimento confirmado (RN-28)──▶ *CANCELADO*
 ```
+
+Transições completas (fonte: `privado.transicoes`):
+
+| De                                         | Para                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| AGUARDANDO_RECEBIMENTO                     | DISPONIVEL, CANCELADO                                                                                        |
+| DISPONIVEL                                 | EM_USO, DEVOLUCAO_SOLICITADA, EM_MANUTENCAO, EXTRAVIADO, SUBSTITUIDO, CANCELADO                              |
+| EM_USO                                     | EM_TRANSFERENCIA, DEVOLUCAO_SOLICITADA, EM_MANUTENCAO, EXTRAVIADO, SUBSTITUIDO, CANCELADO                    |
+| EM_TRANSFERENCIA                           | EM_USO, EXTRAVIADO                                                                                           |
+| EM_MANUTENCAO                              | EM_USO, DISPONIVEL, EXTRAVIADO, SUBSTITUIDO                                                                  |
+| DEVOLUCAO_SOLICITADA                       | DEVOLVIDO, EM_USO, DISPONIVEL, EXTRAVIADO                                                                    |
+| EXTRAVIADO                                 | DISPONIVEL, EM_USO, EM_MANUTENCAO, DEVOLUCAO_SOLICITADA (encontrado → estado anterior), BAIXADO (indenizado) |
+| DEVOLVIDO, SUBSTITUIDO, BAIXADO, CANCELADO | — (finais)                                                                                                   |
 
 | Estado                 | Ativo (conta no saldo)?  | Terminal? |
 | ---------------------- | ------------------------ | --------- |
@@ -253,7 +269,7 @@ EXTRAVIADO ──resolvida ENCONTRADO──▶ (estado anterior) | ──resolvi
 
 ### 4.4 Lote (`lotes.status`)
 
-`ATIVO` (saldo > 0) → `ENCERRADO` (saldo = 0, automático) ; `ATIVO → CANCELADO` (cancelamento do recebimento). Lote não tem estados de uso: suas quantidades e local/responsável é que mudam.
+`ATIVO` (saldo > 0) → `ENCERRADO` (saldo = 0) ; `ATIVO → CANCELADO` (cancelamento do recebimento) ; `ENCERRADO → ATIVO` (somente cancelamento administrativo de retirada — D-15). O banco garante por CHECK que `ATIVO ⇔ saldo > 0` (exceto CANCELADO). Lote não tem estados de uso: suas quantidades e local/responsável é que mudam.
 
 ### 4.5 Recebimento (`recebimentos.status`)
 

@@ -144,8 +144,8 @@ auth.users (Supabase)
   └─1:N─ usuarios_empresa (empresa_id, user_id, papel, ativo)   unique(empresa_id,user_id)
                  │
 empresas ────────┘ (nome, documento, timezone, exige_aceite_movimentacao, limite_atraso_horas, ativo)
-  ├─ papel_permissoes (papel, permissao)                ← global, espelho da matriz TS
-  ├─ sequencias (empresa_id, prefixo, proximo)          ← códigos LOC/BEM/LOT/REC/MOV/OCR/DEV/COB/REL
+  ├─ privado.papel_permissoes (papel, permissao)        ← global, espelho da matriz TS (não exposto)
+  ├─ privado.sequencias (empresa_id, prefixo, proximo)  ← códigos LOC/BEM/LOT/REC/MOV/OCR/DEV/COB/REL
   ├─ fornecedores (razao_social, nome_fantasia, documento, contato jsonb, ativo)
   ├─ locais (codigo, nome, tipo[OBRA|ALMOXARIFADO|ESCRITORIO|OUTRO], endereco, ativo)    unique(empresa,codigo)
   ├─ centros_custo (codigo, nome, ativo)                                                 unique(empresa,codigo)
@@ -195,12 +195,13 @@ empresas ────────┘ (nome, documento, timezone, exige_aceite_mo
   │              storage_path, hash_arquivo, hash_dados, assinatura_hmac, tentativas, erro, iniciado_em, concluido_em)
   ├─ auditoria (empresa_id?, ator_id, acao, entidade_tipo, entidade_id, dados_anteriores jsonb,
   │             dados_novos jsonb, request_id, created_at)                ← append-only
-  └─ limites_taxa (empresa_id, user_id, chave, janela_inicio, contador)  ← rate limit [D-20]
+  └─ privado.limites_taxa (chave, janela_inicio, contador) + privado.limites_config ← rate limit [D-20]
 
-auditoria_autenticacao (sem empresa; email_hash, sucesso, motivo, ip_hash, created_at) ← não exposta
+privado.auditoria_autenticacao (sem empresa; evento, email_hash, ip_hash, motivo) ← não exposta
+privado.transicoes (maquina, de, para) ← tabela única de transições de estado
 ```
 
-Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `itens_recebimento`, `itens_devolucao`, `movimentacoes`, `vistorias`. Ocorrência pode ser sobre locação inteira (ambos nulos) — `check (not (bem_id is not null and lote_id is not null))`.
+Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `itens_devolucao`, `movimentacoes`, `vistorias`. Em `itens_recebimento` o lote só existe após a confirmação (D-33): `check (not (bem_id is not null and lote_id is not null))` e `bem_id ⇒ quantidade = 1`. Ocorrência pode ser sobre locação inteira (ambos nulos) — `check (not (bem_id is not null and lote_id is not null))`.
 
 ### 4.3 Constraints críticas
 
@@ -215,6 +216,23 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 - `modelos_checklist` PUBLICADO: trigger impede update/insert em perguntas.
 - `movimentacoes`, `respostas_vistoria` de vistoria concluída, `auditoria`: imutáveis (sem grant de update + trigger).
 
+### 4.4 Migrations (Fase 2)
+
+| Arquivo                                              | Conteúdo                                                                                    |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `20261008120000_fundacao_tipos.sql`                  | extensões, esquema `privado`, enums, tabela de transições                                   |
+| `20261008120100_nucleo_multiempresa.sql`             | empresas, perfis, usuarios_empresa, papel_permissoes, funções de segurança, sequências      |
+| `20261008120200_cadastros.sql`                       | fornecedores, locais, centros de custo, checklists versionados, categorias                  |
+| `20261008120300_locacoes_ativos.sql`                 | locações, referências externas, itens, recebimentos, bens, lotes, itens de recebimento      |
+| `20261008120400_eventos.sql`                         | vistorias, respostas, movimentações, ocorrências, devoluções, itens de devolução, cobranças |
+| `20261008120500_evidencias_relatorios_auditoria.sql` | evidências, relatórios, auditoria, auditoria de autenticação, limite de taxa                |
+| `20261008120600_triggers.sql`                        | autoria, códigos, guarda de transição, auditoria, imutabilidade, último ADMIN, consistência |
+| `20261008120700_visoes_saldo.sql`                    | `status_bem_ativo`, `v_saldo_item_locacao`, `v_saldo_locacao` (security_invoker)            |
+| `20261008120800_rls_privilegios.sql`                 | revogação dos padrões do Supabase, grants por coluna, RLS de todas as tabelas               |
+| `20261008120900_storage.sql`                         | buckets privados e policies de leitura                                                      |
+
+Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `npm run db:types`; o CI falha se estiver desatualizado).
+
 ## 5. Camadas de autorização (defesa em profundidade)
 
 | Camada             | Mecanismo                                                                                                                                               | Falha esperada                        |
@@ -225,7 +243,7 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 | 4. Banco — funções | `rpc_*` `security definer`, `search_path = ''`, revalidam permissão e empresa a partir da linha-alvo (nunca de parâmetro)                               | exceção `P0001` com código de domínio |
 | 5. Storage         | buckets privados; leitura via policy por prefixo `{empresa_id}/` + vínculo a `evidencias` visível; escrita só pelo servidor                             | 403                                   |
 
-### 5.1 Funções de segurança (SQL)
+### 5.1 Funções de segurança (SQL) — esquema `privado` (não exposto pelo PostgREST, D-30)
 
 ```sql
 usuario_pertence_empresa(p_empresa uuid) returns boolean  -- stable, security definer, search_path=''
@@ -335,5 +353,7 @@ Ambientes **DEV** (Supabase CLI local), **HOMOLOGAÇÃO** e **PRODUÇÃO**: proj
 | Integração | Vitest + Postgres real (Supabase local)                                             | cada `rpc_*`, storage, auditoria na mesma transação                                                                        |
 | RLS        | Vitest + clientes com JWT por perfil (anon, cada papel de A, usuário de B, inativo) | SELECT/INSERT/UPDATE/"cancelar" por tabela crítica                                                                         |
 | E2E        | Playwright (375/768/1280; Chromium/Firefox/WebKit)                                  | 16 cenários da especificação + axe                                                                                         |
+
+Implementação (Fase 2): `tests/support/db.ts` executa cada teste numa transação **sempre revertida**, com `set local role anon|authenticated|service_role` e `request.jwt.claims` — o mesmo mecanismo do PostgREST — sobre o banco seedado. Suites: `tests/rls/` (estrutura, isolamento A×B, atores, storage) e `tests/integration/` (paridade TS×SQL, integridade, triggers/auditoria, saldo, seed) [D-32].
 
 Ambiente de testes de banco: **Supabase CLI** (`supabase start`, requer Docker). Alternativa quando Docker não estiver disponível (como no container de desenvolvimento atual): Postgres 16 local + script `supabase/tests/bootstrap-local.sql` que cria papéis `anon/authenticated/service_role`, esquema `auth` mínimo (`auth.uid()`, `auth.jwt()`, `auth.users`) e `storage` mínimo, suficiente para testes de RLS/integração SQL. O CI usa sempre o Supabase CLI real [D-19].

@@ -2,12 +2,12 @@
 
 MicroSaaS web, multiempresa, para rastrear equipamentos locados **depois** do pedido de compra feito no Sectra: recebimento, vistoria fotográfica, localização, responsável, movimentações, ocorrências, devolução, encerramento de cobrança e relatório em PDF.
 
-> **Estado:** Fase 1 (fundação) concluída. Ainda não há banco, autenticação nem módulos de negócio — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+> **Estado:** Fase 2 (banco e segurança) concluída: schema, RLS, storage privado, seed e testes de isolamento. Ainda sem autenticação na interface nem módulos de negócio — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 
 ## Requisitos
 
 - Node.js 22 (`.nvmrc`) e npm
-- Supabase CLI + Docker (a partir da Fase 2, para banco local)
+- Banco local: Supabase CLI + Docker **ou**, sem Docker, PostgreSQL 16+ instalado (scripts em `scripts/db/`)
 
 ## Primeiros passos
 
@@ -30,21 +30,42 @@ npm run dev                  # http://localhost:3000
 
 Sem as variáveis públicas o **build** falha; sem qualquer obrigatória o **servidor** não atende requisições e registra quais faltam.
 
+## Banco de dados local
+
+Com Docker (fidelidade total):
+
+```bash
+npx supabase start          # API, Auth, Storage e Postgres em 127.0.0.1:54321/54322
+npx supabase db reset       # migrations + seed de demonstração
+```
+
+Sem Docker (Postgres local + camada de compatibilidade Supabase, D-19):
+
+```bash
+npm run db:local:start      # Postgres em 127.0.0.1:54322 (postgres/postgres)
+npm run db:local:reset      # recria: compatibilidade + migrations + seed
+```
+
+Depois de alterar migrations: `npm run db:types` (atualiza `src/types/database.ts`).
+
+**Dados de demonstração** (somente DEV/CI): empresas `[DEMONSTRAÇÃO] Empresa A/B`; usuários `admin.a`, `compras.a`, `operacao.a`, `responsavel.a`, `financeiro.a`, `gestor.a`, `auditor.a`, `inativo.a`, `admin.b`, `operacao.b`, `sem.empresa` — todos `@demo.rastreio.test`, senha `Demo@123456`. O seed recusa rodar em banco marcado com `alter database postgres set app.ambiente = 'producao'` (faça isso em produção).
+
 ## Scripts
 
-| Comando                           | O que faz                                                          |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `npm run dev`                     | Servidor de desenvolvimento                                        |
-| `npm run build` / `npm start`     | Build e execução de produção                                       |
-| `npm run format` / `format:check` | Prettier                                                           |
-| `npm run lint`                    | ESLint (zero avisos)                                               |
-| `npm run typecheck`               | Gera tipos de rotas e roda `tsc`                                   |
-| `npm test`                        | Testes unitários (Vitest)                                          |
-| `npm run test:integration`        | Integração com banco (a partir da Fase 2)                          |
-| `npm run test:rls`                | Testes de RLS (a partir da Fase 2)                                 |
-| `npm run e2e`                     | Playwright contra o build de produção (rode `npm run build` antes) |
-| `npm run check:bundle-secrets`    | Garante que nenhum segredo foi parar no bundle do navegador        |
-| `npm run validate`                | Formatação + lint + tipos + unit + build + varredura de segredos   |
+| Comando                                                  | O que faz                                                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `npm run dev`                                            | Servidor de desenvolvimento                                                          |
+| `npm run build` / `npm start`                            | Build e execução de produção                                                         |
+| `npm run format` / `format:check`                        | Prettier                                                                             |
+| `npm run lint`                                           | ESLint (zero avisos)                                                                 |
+| `npm run typecheck`                                      | Gera tipos de rotas e roda `tsc`                                                     |
+| `npm test`                                               | Testes unitários (Vitest)                                                            |
+| `npm run test:integration`                               | Integração com banco: paridade TS×SQL, integridade, triggers, auditoria, saldo, seed |
+| `npm run test:rls`                                       | RLS: isolamento entre empresas, perfis, anônimo, inativo, storage                    |
+| `npm run e2e`                                            | Playwright contra o build de produção (rode `npm run build` antes)                   |
+| `npm run db:local:start` / `db:local:reset` / `db:types` | Banco local sem Docker / recriar / gerar tipos                                       |
+| `npm run check:bundle-secrets`                           | Garante que nenhum segredo foi parar no bundle do navegador                          |
+| `npm run validate`                                       | Formatação + lint + tipos + unit + build + varredura de segredos                     |
 
 `E2E_FULL=1 npm run e2e` inclui Firefox e WebKit (suíte pré-implantação).
 
@@ -56,7 +77,8 @@ src/components     ui/ (design system), forms/, tables/, layout/, domain/
 src/features       módulos de domínio (a partir da Fase 4)
 src/lib            env, supabase, observability, security, format, validation
 src/proxy.ts       request id, CSP com nonce, renovação de sessão
-tests/e2e          Playwright
+supabase/          config.toml, migrations/, seed.sql, tests/bootstrap-local.sql
+tests/             e2e/ (Playwright), rls/, integration/, support/
 docs/              contrato técnico e estado do projeto
 ```
 
