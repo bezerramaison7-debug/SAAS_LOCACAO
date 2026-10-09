@@ -26,7 +26,8 @@
     "stack:parar": "scripts/stack/stack.sh parar",
     "db:types": "supabase gen types typescript --db-url \"${TEST_DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}\" --schema public 2>/dev/null > src/types/database.ts && prettier --write src/types/database.ts",
     "check:bundle-secrets": "node scripts/check-bundle-secrets.mjs",
-    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle-secrets"
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle-secrets",
+    "backup:testar": "scripts/backup/testar.sh"
   },
   "dependencies": {
     "@date-fns/tz": "1.5.0",

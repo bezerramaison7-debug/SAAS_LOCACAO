@@ -50,3 +50,6 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branches/
 tests/e2e/.auth/
+
+# backups locais (dados reais nunca vão para o git)
+/backups
