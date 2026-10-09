@@ -2,15 +2,22 @@
 
 ## Fase atual
 
-**Fase 7 — Devolução e financeiro: CONCLUÍDA, aguardando autorização para a Fase 8 (Dashboard e relatórios).**
+**Fase 8 — Dashboard e relatórios: CONCLUÍDA, aguardando autorização para a Fase 9 (Qualidade e homologação).**
 
 ## Última tarefa concluída
 
-Gate da Fase 7 atingido: encerramentos operacional e financeiro independentes. Provado por integração (CA-50..55: saldo só muda na retirada, retirada nunca encerra cobrança, saldo zerado → encerramento pendente, nenhum encerramento altera o outro, nas duas ordens) e por E2E em 375/768/1280 px (devolução parcial de lote e de bem individual com vistoria de saída e comprovante; financeiro encerra com data enquanto a operação segue em devolução; depois a operação encerra sem tocar no financeiro).
+Gate da Fase 8 atingido: o usuário gera o relatório completo da locação pela interface — com as fotos já registradas no sistema, baixadas do storage privado e normalizadas pelo servidor — sem manipular nenhum arquivo. Provado por E2E em 375/768/1280 px (pedido, acompanhamento até "Pronto", download por URL assinada, hash do arquivo conferido, PDF lido com todas as seções, foto desenhada e legenda) e por integração (CA-70: PDF renderizado e lido; fila, watchdog, permissões). CA-72: cada indicador do painel bate com o total da lista que abre, para ADMIN, FINANCEIRO e RESPONSAVEL_LOCAL.
 
 ## Funcionalidades concluídas
 
 **Fases 1–4:** fundação, banco multiempresa com RLS, autenticação real, usuários, cadastros, locações em etapas com Sectra manual, lista e detalhe.
+
+**Fase 8:**
+
+- Painel (F8.1): 17 indicadores em grupos (operação, prazos, devoluções/evidências, financeiro), regra de cálculo visível em cada cartão, link para a lista filtrada com o mesmo total (D-71); alertas de términos em 7 dias e ocorrências vencidas (F8.6).
+- Relatórios PDF (F8.2–F8.5): por locação, bem, local e período; pedido imediato, geração assíncrona com fila, watchdog e 3 tentativas; snapshot consistente; fotos normalizadas com legenda (evento, item, data, local, usuário); hash dos dados impresso, hash do arquivo e HMAC no banco; download por URL assinada (D-72..D-77).
+- Atalhos "Gerar relatório PDF" na locação e na ficha do bem; `/relatorios` com formulário e histórico.
+- Migration 016 `20261008126000_painel_relatorios`.
 
 **Fase 7:**
 
@@ -49,14 +56,13 @@ Gate da Fase 7 atingido: encerramentos operacional e financeiro independentes. P
 
 ## Funcionalidades parciais
 
-- Relatórios e painel ainda exibem "disponível a partir da Fase N" (D-28).
 - Vistoria periódica é iniciada manualmente; agendamento/lembrete de periodicidade não foi implementado (F6.8, P2).
 - F5.7 (geolocalização opcional nas fotos, P1): a API já aceita latitude/longitude, mas a interface não as coleta.
 - F4.7 (aditivo de itens, P1) continua pendente (D-46).
 
 ## Próximas tarefas
 
-Fase 8 — painel com indicadores clicáveis, alertas e relatórios assíncronos em PDF com fotos e hash.
+Fase 9 — suíte completa em 3 navegadores, acessibilidade e teclado, revisão de segurança, backup/restore, guia de deploy e manual.
 
 ## Bugs conhecidos
 
@@ -64,18 +70,20 @@ Nenhum.
 
 ## Decisões tomadas
 
-D-01 a D-70 em `docs/decisions.md`. Novas na Fase 7: D-62 (devolução só por funções), D-63 (vistoria de saída), D-64 (desmobilização automática), D-65 (retirada parcial), D-66 (comprovante), D-67 (encerramentos), D-68 (estimativa), D-69 (cobranças), D-70 (envio após hidratação).
+D-01 a D-78 em `docs/decisions.md`. Novas na Fase 8: D-71 (indicadores pela consulta da lista), D-72 (pedido com `after()` e worker), D-73 (snapshot só para o worker), D-74 (template PDF), D-75 (integridade), D-76 (fila), D-77 (tipos de relatório), D-78 (foto de teste).
 
 ## Migrations aplicadas
 
-`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6), `20261008125000_devolucoes_cobrancas` (Fase 7).
+`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6), `20261008125000_devolucoes_cobrancas` (Fase 7), `20261008126000_painel_relatorios` (Fase 8).
 
 ## Variáveis/configurações necessárias
 
-Sem variáveis novas (o QR usa `NEXT_PUBLIC_APP_URL`). Homologação/produção: buckets privados criados pela migration 010; `NEXT_PUBLIC_SUPABASE_URL` em https (D-52).
+Sem variáveis novas: o worker usa `REPORT_SIGNING_SECRET` (já obrigatória). Produção precisa de um agendador chamando `POST /api/reports/process` a cada minuto com `Authorization: Bearer <REPORT_SIGNING_SECRET>` (D-72). O QR usa `NEXT_PUBLIC_APP_URL`. Homologação/produção: buckets privados criados pela migration 010; `NEXT_PUBLIC_SUPABASE_URL` em https (D-52).
 
 ## Arquivos importantes
 
+- `src/features/painel/**`, `src/features/relatorios/**`, `src/lib/relatorios/**`, `src/app/(app)/{dashboard,relatorios}/**`, `src/app/api/reports/**`.
+- `supabase/migrations/20261008126000_painel_relatorios.sql`, `tests/integration/relatorios.test.ts`, `tests/e2e/{relatorios,painel}.spec.ts`.
 - `src/features/{devolucoes,cobrancas,encerramentos}/**`, `src/app/(app)/{devolucoes,cobrancas}/**`.
 - `supabase/migrations/20261008125000_devolucoes_cobrancas.sql`, `tests/integration/devolucoes.test.ts`, `tests/e2e/devolucoes.spec.ts`.
 - `src/features/movimentacoes/**`, `src/features/ocorrencias/**`, `src/features/bens/{ficha,linha-do-tempo,form-troca,actions}.tsx?`, `src/lib/qr/qr.ts`.
@@ -90,14 +98,14 @@ Sem variáveis novas (o QR usa `NEXT_PUBLIC_APP_URL`). Homologação/produção:
 
 ## Testes atualmente passando
 
-- Unit: 262 (32 arquivos).
-- Integração: 144 (9 arquivos).
+- Unit: 270 (33 arquivos).
+- Integração: 150 (10 arquivos).
 - RLS: 235 (4 arquivos).
-- E2E (Chromium 375/768/1280, Auth e Storage reais): 294 passando, 11 pulados por aplicabilidade.
+- E2E (Chromium 375/768/1280, Auth e Storage reais): 299 passando, 15 pulados por aplicabilidade.
 
 ## Testes atualmente falhando
 
-Nenhum. A falha intermitente da Fase 6 (envio de contrato) teve a causa encontrada e corrigida (D-70).
+Nenhum.
 
 ## Dívidas técnicas
 
@@ -108,7 +116,10 @@ Nenhum. A falha intermitente da Fase 6 (envio de contrato) teve a causa encontra
 - Abas do detalhe da locação limitadas a 200 linhas.
 - `/vistorias` e `/movimentacoes` sem busca por bem/lote (filtro só por situação).
 - Retirada confirmada não pode ser desfeita pela interface (o banco já prevê ENCERRAMENTO_PENDENTE → EM_COBRANCA para um cancelamento administrativo futuro).
-- Filtros "sem comprovante"/"sem documento" consideram até 1000 registros por consulta.
+- Filtros "sem comprovante"/"sem documento" consideram até 1000 registros por consulta; soma do saldo de lotes do painel lê até 5000 lotes.
+- Painel faz ~20 contagens por carregamento (D-71).
+- PDF usa a fonte Helvetica embutida: caracteres fora do Latin-1/cp1252 saem como "?".
+- Verificação pública do HMAC de um PDF (endpoint de conferência) ainda não existe; os hashes são exibidos na página do relatório.
 
 ## Ambiente de desenvolvimento observado
 
@@ -117,4 +128,4 @@ Nenhum. A falha intermitente da Fase 6 (envio de contrato) teve a causa encontra
 
 ## Próximo passo recomendado
 
-Aguardar autorização explícita para iniciar a **Fase 8 — Dashboard e relatórios**.
+Aguardar autorização explícita para iniciar a **Fase 9 — Qualidade e homologação**.
