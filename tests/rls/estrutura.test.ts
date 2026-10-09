@@ -4,9 +4,8 @@ import { comoAtor, encerrarPool, superusuario } from "../support/db";
 
 afterAll(encerrarPool);
 
-/** Tabelas em que DELETE é permitido (somente linhas de rascunho — D-31). */
+/** Tabelas em que DELETE é permitido (somente linhas de rascunho — D-31). Itens de devolução: só por função (Fase 7). */
 const DELETE_PERMITIDO = [
-  "itens_devolucao",
   "itens_locacao",
   "itens_recebimento",
   "perguntas_checklist",

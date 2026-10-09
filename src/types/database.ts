@@ -998,6 +998,7 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           data_encerramento_financeiro: string | null;
+          desmobilizacao_devolucao_id: string | null;
           desmobilizacao_iniciada_em: string | null;
           desmobilizacao_iniciada_por: string | null;
           empresa_id: string;
@@ -1028,6 +1029,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           data_encerramento_financeiro?: string | null;
+          desmobilizacao_devolucao_id?: string | null;
           desmobilizacao_iniciada_em?: string | null;
           desmobilizacao_iniciada_por?: string | null;
           empresa_id: string;
@@ -1057,6 +1059,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           data_encerramento_financeiro?: string | null;
+          desmobilizacao_devolucao_id?: string | null;
           desmobilizacao_iniciada_em?: string | null;
           desmobilizacao_iniciada_por?: string | null;
           empresa_id?: string;
@@ -1077,6 +1080,13 @@ export type Database = {
           updated_by?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "locacoes_desmobilizacao_devolucao_fk";
+            columns: ["empresa_id", "desmobilizacao_devolucao_id"];
+            isOneToOne: false;
+            referencedRelation: "devolucoes";
+            referencedColumns: ["empresa_id", "id"];
+          },
           {
             foreignKeyName: "locacoes_empresa_id_centro_custo_id_fkey";
             columns: ["empresa_id", "centro_custo_id"];
@@ -2136,6 +2146,7 @@ export type Database = {
           evento_origem_id: string | null;
           evento_origem_tipo: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id: string;
+          item_devolucao_id: string | null;
           item_recebimento_id: string | null;
           lote_id: string | null;
           modelo_id: string;
@@ -2158,6 +2169,7 @@ export type Database = {
           evento_origem_id?: string | null;
           evento_origem_tipo?: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id?: string;
+          item_devolucao_id?: string | null;
           item_recebimento_id?: string | null;
           lote_id?: string | null;
           modelo_id: string;
@@ -2179,6 +2191,7 @@ export type Database = {
           evento_origem_id?: string | null;
           evento_origem_tipo?: Database["public"]["Enums"]["entidade_evidencia"] | null;
           id?: string;
+          item_devolucao_id?: string | null;
           item_recebimento_id?: string | null;
           lote_id?: string | null;
           modelo_id?: string;
@@ -2224,6 +2237,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "usuarios_empresa";
             referencedColumns: ["empresa_id", "user_id"];
+          },
+          {
+            foreignKeyName: "vistorias_item_devolucao_fk";
+            columns: ["empresa_id", "item_devolucao_id"];
+            isOneToOne: false;
+            referencedRelation: "itens_devolucao";
+            referencedColumns: ["empresa_id", "id"];
           },
           {
             foreignKeyName: "vistorias_item_recebimento_fk";
@@ -2348,6 +2368,18 @@ export type Database = {
         }[];
       };
       consumir_limite_taxa: { Args: { p_acao: string }; Returns: boolean };
+      estimativa_locacao: {
+        Args: { p_fim: string; p_inicio: string; p_locacao: string };
+        Returns: {
+          descricao: string;
+          item_locacao_id: string;
+          periodicidade: Database["public"]["Enums"]["periodicidade"];
+          unidade: string;
+          unidades_dia: string;
+          valor_estimado: string;
+          valor_unitario: string;
+        }[];
+      };
       excesso_recebimento: {
         Args: { p_recebimento: string };
         Returns: {
@@ -2372,6 +2404,7 @@ export type Database = {
         }[];
       };
       pendencias_ativacao_locacao: { Args: { p_locacao: string }; Returns: string[] };
+      pendencias_encerramento_operacional: { Args: { p_locacao: string }; Returns: string[] };
       pendencias_recebimento: { Args: { p_recebimento: string }; Returns: string[] };
       pendencias_vistoria: { Args: { p_vistoria: string }; Returns: string[] };
       registrar_evento_autenticacao: {
@@ -2401,6 +2434,10 @@ export type Database = {
         };
         Returns: string;
       };
+      rpc_agendar_devolucao: {
+        Args: { p_agendada_para: string; p_devolucao: string };
+        Returns: undefined;
+      };
       rpc_alterar_papel: {
         Args: { p_associacao: string; p_papel: Database["public"]["Enums"]["papel_usuario"] };
         Returns: undefined;
@@ -2408,6 +2445,10 @@ export type Database = {
       rpc_ativar_locacao: { Args: { p_locacao: string }; Returns: undefined };
       rpc_autorizar_excesso: {
         Args: { p_justificativa: string; p_recebimento: string };
+        Returns: undefined;
+      };
+      rpc_cancelar_devolucao: {
+        Args: { p_devolucao: string; p_motivo: string };
         Returns: undefined;
       };
       rpc_cancelar_locacao: { Args: { p_locacao: string; p_motivo: string }; Returns: undefined };
@@ -2424,10 +2465,23 @@ export type Database = {
         Returns: undefined;
       };
       rpc_concluir_vistoria: { Args: { p_vistoria: string }; Returns: undefined };
+      rpc_conferir_cobranca: { Args: { p_cobranca: string }; Returns: undefined };
+      rpc_conferir_devolucao: { Args: { p_devolucao: string }; Returns: undefined };
       rpc_confirmar_recebimento: {
         Args: { p_recebimento: string };
         Returns: Database["public"]["Enums"]["status_recebimento"];
       };
+      rpc_confirmar_retirada: {
+        Args: {
+          p_devolucao: string;
+          p_imediata?: boolean;
+          p_itens: Json;
+          p_recebedor: string;
+          p_retirada_em: string;
+        };
+        Returns: undefined;
+      };
+      rpc_dar_ciencia_devolucao: { Args: { p_devolucao: string }; Returns: undefined };
       rpc_definir_lote_recebimento: {
         Args: {
           p_condicao?: Database["public"]["Enums"]["condicao_item"];
@@ -2446,6 +2500,9 @@ export type Database = {
         Args: { p_motivo: string; p_recebimento: string };
         Returns: undefined;
       };
+      rpc_encerrar_financeiro: { Args: { p_data: string; p_locacao: string }; Returns: undefined };
+      rpc_encerrar_operacional: { Args: { p_locacao: string }; Returns: undefined };
+      rpc_iniciar_desmobilizacao: { Args: { p_locacao: string }; Returns: undefined };
       rpc_iniciar_vistoria: {
         Args: {
           p_bem?: string;
@@ -2455,6 +2512,7 @@ export type Database = {
         Returns: string;
       };
       rpc_iniciar_vistoria_entrada: { Args: { p_linha: string }; Returns: string };
+      rpc_iniciar_vistoria_saida: { Args: { p_item_devolucao: string }; Returns: string };
       rpc_listar_usuarios_empresa: {
         Args: { p_empresa: string };
         Returns: {
@@ -2467,6 +2525,10 @@ export type Database = {
           ultimo_acesso: string;
           user_id: string;
         }[];
+      };
+      rpc_marcar_cobranca_divergente: {
+        Args: { p_cobranca: string; p_motivo: string };
+        Returns: undefined;
       };
       rpc_nova_versao_checklist: { Args: { p_modelo: string }; Returns: string };
       rpc_preparar_evidencia: {
@@ -2491,6 +2553,17 @@ export type Database = {
       rpc_recusar_movimentacao: {
         Args: { p_motivo: string; p_movimentacao: string };
         Returns: undefined;
+      };
+      rpc_registrar_cobranca: {
+        Args: {
+          p_competencia_fim: string;
+          p_competencia_inicio: string;
+          p_locacao: string;
+          p_numero_documento?: string;
+          p_observacoes?: string;
+          p_valor: number;
+        };
+        Returns: string;
       };
       rpc_registrar_evidencia: {
         Args: {
@@ -2543,6 +2616,10 @@ export type Database = {
         Returns: undefined;
       };
       rpc_remover_linha_recebimento: { Args: { p_linha: string }; Returns: undefined };
+      rpc_resolver_cobranca: {
+        Args: { p_cobranca: string; p_resolucao: string };
+        Returns: undefined;
+      };
       rpc_resolver_ocorrencia: {
         Args: {
           p_ocorrencia: string;
@@ -2554,6 +2631,10 @@ export type Database = {
       rpc_salvar_respostas_vistoria: {
         Args: { p_respostas: Json; p_vistoria: string };
         Returns: undefined;
+      };
+      rpc_solicitar_devolucao: {
+        Args: { p_itens: Json; p_locacao: string; p_observacoes?: string };
+        Returns: string;
       };
       rpc_substituir_evidencia: {
         Args: {
