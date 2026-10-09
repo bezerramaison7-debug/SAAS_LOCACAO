@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { DetalheAtivo } from "@/features/bens/components-detalhe";
+import { CabecalhoFicha } from "@/features/bens/ficha";
+import { LinhaDoTempo } from "@/features/bens/linha-do-tempo";
 import { obterLote, vistoriasDe } from "@/features/bens/queries";
 import { evidenciasDe } from "@/features/evidencias/queries";
 import { ROTULO_STATUS_LOTE, rotulo } from "@/features/locacoes/rotulos-eventos";
@@ -46,15 +48,29 @@ export default async function LotePage({ params }: PageProps<"/bens/lotes/[id]">
         contexto={contexto}
         entidade="LOTE"
         entidadeId={lote.id}
+        cabecalho={
+          <CabecalhoFicha
+            contexto={contexto}
+            alvo={{
+              tipo: "lote",
+              id: lote.id,
+              status: lote.status,
+              temChecklist: lote.temChecklist,
+            }}
+          />
+        }
+        linhaDoTempo={<LinhaDoTempo contexto={contexto} alvo={{ lote: lote.id }} />}
         caminho={`/bens/lotes/${lote.id}`}
         vistorias={vistorias}
         fotos={fotos}
         fotosRecebimento={fotosRecebimento}
         dados={[
+          ["Item contratado", lote.item || "—"],
           ["Local atual", lote.local ?? "—"],
           ["Responsável atual", lote.responsavel],
           ["Recebido", formatarQuantidade(lote.recebida)],
           ["Devolvido", formatarQuantidade(lote.devolvida)],
+          ["Baixado (indenizado)", formatarQuantidade(lote.baixada)],
           [
             "Recebimento",
             lote.recebimento ? (
@@ -67,8 +83,15 @@ export default async function LotePage({ params }: PageProps<"/bens/lotes/[id]">
                   ? ` em ${formatarDataHora(lote.recebimento.dataEvento, fuso)}`
                   : ""}
               </Link>
+            ) : lote.loteOrigemId ? (
+              <Link
+                href={`/bens/lotes/${lote.loteOrigemId}`}
+                className="text-primaria hover:underline"
+              >
+                Divisão de outro lote
+              </Link>
             ) : (
-              "Divisão de outro lote"
+              "—"
             ),
           ],
           [

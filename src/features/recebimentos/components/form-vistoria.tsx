@@ -42,7 +42,7 @@ export function FormVistoria({
   fotos,
 }: {
   vistoriaId: string;
-  recebimentoId: string;
+  recebimentoId?: string;
   perguntas: PerguntaVistoria[];
   respostas: Record<string, string>;
   fotos: Record<string, ReactNode>;
@@ -53,7 +53,7 @@ export function FormVistoria({
     <form action={acao} className="space-y-4" noValidate>
       <FormAlert estado={estado} />
       <input type="hidden" name="vistoriaId" value={vistoriaId} />
-      <input type="hidden" name="recebimentoId" value={recebimentoId} />
+      {recebimentoId ? <input type="hidden" name="recebimentoId" value={recebimentoId} /> : null}
       <ol className="space-y-4">
         {perguntas.map((p) => {
           const nome = `resposta_${p.id}`;

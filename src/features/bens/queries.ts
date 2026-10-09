@@ -5,7 +5,13 @@ import { filtroBuscaIlike } from "@/lib/db/busca";
 import { intervaloPaginacao, type Paginacao } from "@/lib/validation/comum";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type FiltrosBens = { q: string; local: string | null; paginacao: Paginacao };
+export type FiltrosBens = {
+  q: string;
+  local: string | null;
+  /** "Meus itens": só o que está sob responsabilidade do usuário logado. */
+  meus: boolean;
+  paginacao: Paginacao;
+};
 
 /** Bens visíveis pela RLS (RESPONSAVEL_LOCAL vê só os seus). */
 export async function listarBens(contexto: Contexto, filtros: FiltrosBens) {
@@ -22,6 +28,7 @@ export async function listarBens(contexto: Contexto, filtros: FiltrosBens) {
     .order("codigo", { ascending: false })
     .range(de, ate);
   if (filtros.local) consulta = consulta.eq("local_atual_id", filtros.local);
+  if (filtros.meus) consulta = consulta.eq("responsavel_atual_id", contexto.usuario.id);
   const busca = filtroBuscaIlike(
     ["codigo", "numero_serie", "placa", "identificacao_fornecedor"],
     filtros.q,
@@ -52,6 +59,7 @@ export async function listarLotes(contexto: Contexto, filtros: FiltrosBens) {
     .order("codigo", { ascending: false })
     .range(de, ate);
   if (filtros.local) consulta = consulta.eq("local_atual_id", filtros.local);
+  if (filtros.meus) consulta = consulta.eq("responsavel_atual_id", contexto.usuario.id);
   const busca = filtroBuscaIlike(["codigo"], filtros.q);
   if (busca) consulta = consulta.or(busca);
   const { data, count, error } = await consulta;
@@ -84,7 +92,7 @@ export async function obterBem(contexto: Contexto, id: string) {
   const { data: b } = await supabase
     .from("bens")
     .select(
-      "id, codigo, status, numero_serie, placa, identificacao_fornecedor, observacoes, responsavel_atual_id, recebimento_id, item_locacao_id, locais(nome), recebimentos(codigo, data_evento, locacao_id, locacoes(codigo))",
+      "id, codigo, status, numero_serie, placa, identificacao_fornecedor, observacoes, responsavel_atual_id, recebimento_id, item_locacao_id, substitui_bem_id, locais(nome), recebimentos(codigo, data_evento, locacao_id, locacoes(codigo)), itens_locacao(descricao, locacao_id, locacoes(codigo), categorias_bem(checklist_familia_id))",
     )
     .eq("empresa_id", contexto.empresa.id)
     .eq("id", id)
@@ -108,9 +116,13 @@ export async function obterBem(contexto: Contexto, id: string) {
           dataEvento: b.recebimentos?.data_evento ?? null,
         }
       : null,
-    locacao: b.recebimentos
-      ? { id: b.recebimentos.locacao_id, codigo: b.recebimentos.locacoes?.codigo ?? "—" }
+    // Via item: o bem substituto não tem recebimento próprio (RN-42).
+    locacao: b.itens_locacao
+      ? { id: b.itens_locacao.locacao_id, codigo: b.itens_locacao.locacoes?.codigo ?? "—" }
       : null,
+    item: b.itens_locacao?.descricao ?? "",
+    temChecklist: Boolean(b.itens_locacao?.categorias_bem?.checklist_familia_id),
+    substituiBemId: b.substitui_bem_id,
   };
 }
 
@@ -119,7 +131,7 @@ export async function obterLote(contexto: Contexto, id: string) {
   const { data: l } = await supabase
     .from("lotes")
     .select(
-      "id, codigo, status, saldo::text, quantidade_recebida::text, quantidade_devolvida::text, responsavel_atual_id, recebimento_id, locais(nome), recebimentos(codigo, data_evento, locacao_id, locacoes(codigo))",
+      "id, codigo, status, saldo::text, quantidade_recebida::text, quantidade_devolvida::text, quantidade_baixada::text, responsavel_atual_id, recebimento_id, lote_origem_id, locais(nome), recebimentos(codigo, data_evento, locacao_id, locacoes(codigo)), itens_locacao(descricao, unidade, locacao_id, locacoes(codigo), categorias_bem(checklist_familia_id))",
     )
     .eq("empresa_id", contexto.empresa.id)
     .eq("id", id)
@@ -142,9 +154,15 @@ export async function obterLote(contexto: Contexto, id: string) {
           dataEvento: l.recebimentos?.data_evento ?? null,
         }
       : null,
-    locacao: l.recebimentos
-      ? { id: l.recebimentos.locacao_id, codigo: l.recebimentos.locacoes?.codigo ?? "—" }
+    // Via item: lote de divisão não tem recebimento próprio (RN-34).
+    locacao: l.itens_locacao
+      ? { id: l.itens_locacao.locacao_id, codigo: l.itens_locacao.locacoes?.codigo ?? "—" }
       : null,
+    item: l.itens_locacao?.descricao ?? "",
+    unidade: l.itens_locacao?.unidade ?? "",
+    baixada: l.quantidade_baixada,
+    loteOrigemId: l.lote_origem_id,
+    temChecklist: Boolean(l.itens_locacao?.categorias_bem?.checklist_familia_id),
   };
 }
 

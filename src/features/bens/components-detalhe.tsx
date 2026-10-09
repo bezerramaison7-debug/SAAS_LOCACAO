@@ -22,6 +22,8 @@ export function DetalheAtivo({
   entidade,
   entidadeId,
   caminho,
+  cabecalho,
+  linhaDoTempo,
 }: {
   contexto: Contexto;
   dados: [string, ReactNode][];
@@ -31,11 +33,15 @@ export function DetalheAtivo({
   entidade: "BEM" | "LOTE";
   entidadeId: string;
   caminho: string;
+  /** Alertas e ações da ficha (F6.3). */
+  cabecalho: ReactNode;
+  linhaDoTempo: ReactNode;
 }) {
   const fuso = contexto.empresa.timezone;
   const podeGerenciar = pode(contexto, "evidencia.substituir_remover");
   return (
     <div className="space-y-6">
+      {cabecalho}
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {dados.map(([t, v]) => (
           <div key={t} className="rounded-md border border-borda bg-superficie p-3">
@@ -44,6 +50,12 @@ export function DetalheAtivo({
           </div>
         ))}
       </dl>
+      <section aria-labelledby="historico" className="space-y-3">
+        <h2 id="historico" className="text-xl font-semibold">
+          Linha do tempo
+        </h2>
+        {linhaDoTempo}
+      </section>
       <section aria-labelledby="vistorias" className="space-y-2">
         <h2 id="vistorias" className="text-xl font-semibold">
           Vistorias

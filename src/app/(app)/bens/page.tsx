@@ -37,6 +37,7 @@ export default async function BensPage({ searchParams }: PageProps<"/bens">) {
       .nullable()
       .catch(null)
       .parse(um(p.local) ?? null),
+    meus: um(p.meus) === "1",
     paginacao: paginacaoSchema.parse({ pagina: um(p.pagina), tamanho: um(p.tamanho) }),
   };
   const [locais, bens, lotes] = await Promise.all([
@@ -92,6 +93,16 @@ export default async function BensPage({ searchParams }: PageProps<"/bens">) {
             ))}
           </Select>
         </div>
+        <label className="flex min-h-11 items-center gap-2 sm:self-end">
+          <input
+            type="checkbox"
+            name="meus"
+            value="1"
+            defaultChecked={filtros.meus}
+            className="size-5 accent-[var(--primaria)]"
+          />
+          Só meus itens
+        </label>
         <Button type="submit" variante="secundaria">
           <Search aria-hidden /> Filtrar
         </Button>

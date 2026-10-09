@@ -248,14 +248,15 @@ export async function excessoRecebimento(id: string) {
   }));
 }
 
-/** Membros ativos da empresa (responsável é sempre um usuário associado — RN-32). */
+/** Membros ativos da empresa (RN-32); auditor não recebe itens. */
 export async function opcoesResponsaveis(contexto: Contexto) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("usuarios_empresa")
     .select("user_id, perfis_usuario(nome)")
     .eq("empresa_id", contexto.empresa.id)
-    .eq("ativo", true);
+    .eq("ativo", true)
+    .neq("papel", "AUDITOR");
   return (data ?? [])
     .map((u) => ({ id: u.user_id, rotulo: u.perfis_usuario?.nome ?? "Usuário" }))
     .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));

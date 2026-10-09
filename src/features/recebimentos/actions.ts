@@ -247,7 +247,7 @@ export async function salvarRespostas(
   if (!contexto) return semPermissao();
   const vistoriaId = id(formData.get("vistoriaId"));
   const recebimentoId = id(formData.get("recebimentoId"));
-  if (!vistoriaId || !recebimentoId) return falha("Vistoria inválida.");
+  if (!vistoriaId) return falha("Vistoria inválida.");
   const supabase = await createSupabaseServerClient();
   const { data: vistoria } = await supabase
     .from("vistorias")
@@ -280,7 +280,8 @@ export async function salvarRespostas(
     p_respostas: payload,
   });
   if (error) return falha(traduzirErroBanco(error).mensagem, { valores: campos });
-  revalidar(recebimentoId);
+  if (recebimentoId) revalidar(recebimentoId);
+  revalidatePath(`/vistorias/${vistoriaId}`);
   return sucesso("Respostas salvas.");
 }
 
