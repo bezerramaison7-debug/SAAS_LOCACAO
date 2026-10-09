@@ -233,9 +233,13 @@ test.describe("Permissões do recebimento", () => {
     await pr.goto("/recebimentos");
     await expect(pr.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
     // Vê somente os bens sob sua responsabilidade (RLS).
-    await pr.goto("/bens");
-    await expect(visivel(pr.locator("main").getByText("BEM-000001"))).toBeVisible();
-    await expect(pr.locator("main").getByText("BEM-000002")).toHaveCount(0);
+    // Busca pelo código: a lista pagina e outros testes atribuem bens a esta conta.
+    await pr.goto("/bens?q=BEM-000001");
+    await expect(
+      visivel(pr.locator("main").getByText("BEM-000001", { exact: true })),
+    ).toBeVisible();
+    await pr.goto("/bens?q=BEM-000002");
+    await expect(pr.locator("main").getByText("BEM-000002", { exact: true })).toHaveCount(0);
     await rl.close();
   });
 });

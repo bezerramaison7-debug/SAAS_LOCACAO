@@ -226,7 +226,8 @@ test.describe("ocorrências, troca, vistoria e QR (empresa A)", () => {
     await page.getByLabel("Resultado").selectOption({ label: "Reparado" });
     await page.getByLabel("Como foi resolvida").fill("Fonte substituída pelo fornecedor");
     await page.getByRole("button", { name: "Resolver ocorrência" }).click();
-    await expect(main(page).getByText("Resolvida").first()).toBeVisible();
+    // Aviso da ação concluída (o rótulo "Como foi resolvida" já casaria com "Resolvida").
+    await expect(page.getByText("Ocorrência resolvida.")).toBeVisible();
 
     await page.goto(`/bens/${defeito.id}`);
     await expect(main(page).getByRole("link", { name: "Movimentar" })).toBeVisible();

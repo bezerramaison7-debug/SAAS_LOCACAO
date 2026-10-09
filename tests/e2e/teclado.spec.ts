@@ -78,7 +78,7 @@ test.describe("operação só com teclado", () => {
     await page.keyboard.type("Registrada por engano no bem errado");
     await focarComTab(page, dialogo.getByRole("button", { name: "Cancelar ocorrência" }));
     await page.keyboard.press("Enter");
-    await expect(page.getByText("Cancelada").first()).toBeVisible();
+    await expect(page.getByText("Ocorrência cancelada.")).toBeVisible();
   });
 
   test("movimentação só com teclado", async ({ page }) => {

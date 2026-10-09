@@ -8,6 +8,7 @@ import { serverEnv } from "@/lib/env/server";
 import { logger } from "@/lib/observability/logger";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+import { falhaTransitoria } from "./falhas";
 import { normalizarFoto } from "./fotos";
 import { assinarRelatorio, jsonCanonico, sha256Hex } from "./integridade";
 import { DocumentoRelatorio, type FotoPdf } from "./pdf/documento";
@@ -70,9 +71,12 @@ async function processarJob(id: string, empresaId: string): Promise<void> {
   for (let i = 0; i < fila.length; i += CONCORRENCIA_DOWNLOAD) {
     await Promise.all(
       fila.slice(i, i + CONCORRENCIA_DOWNLOAD).map(async (evidencia, j) => {
-        const { data } = await admin.storage
+        const { data, error: erroFoto } = await admin.storage
           .from(evidencia.bucket)
           .download(evidencia.storage_path);
+        // O relatório concluído é imutável: falha de rede não pode virar
+        // "imagem indisponível" — o job falha e é tentado de novo.
+        if (erroFoto && falhaTransitoria(erroFoto)) throw erroFoto;
         const jpeg = data ? await normalizarFoto(new Uint8Array(await data.arrayBuffer())) : null;
         fotos[i + j] = { evidencia, jpeg };
       }),
@@ -87,11 +91,18 @@ async function processarJob(id: string, empresaId: string): Promise<void> {
     hashDados,
     hashArquivo,
   });
-  const caminho = `${empresaId}/relatorio/${id}/${randomUUID()}.pdf`;
-  const envio = await admin.storage
-    .from("relatorios")
-    .upload(caminho, pdf, { contentType: "application/pdf", upsert: false });
-  if (envio.error) throw envio.error;
+  // Uma nova tentativa imediata para falha transitória (caminho novo, sem sobrescrever).
+  let caminho = "";
+  for (let tentativa = 1; ; tentativa++) {
+    caminho = `${empresaId}/relatorio/${id}/${randomUUID()}.pdf`;
+    const envio = await admin.storage
+      .from("relatorios")
+      .upload(caminho, pdf, { contentType: "application/pdf", upsert: false });
+    if (!envio.error) break;
+    if (tentativa >= 2 || !falhaTransitoria(envio.error)) throw envio.error;
+    logger.warn("relatorio.envio.retentativa", { modulo: "relatorios", relatorio_id: id });
+    await new Promise((r) => setTimeout(r, 1000));
+  }
   const { error: erroConclusao } = await admin.rpc("relatorio_concluir", {
     p_relatorio: id,
     p_storage_path: caminho,

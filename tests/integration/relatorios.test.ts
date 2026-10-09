@@ -151,9 +151,10 @@ describe("PDF do relatório de locação (CA-70)", () => {
   it("contém todas as seções, fotos com legenda, versão, data, gerador e hash", async () => {
     await comoAtor(admin, async (s) => {
       // Foto real (via função de domínio) ligada ao bem, para a seção de fotografias.
+      const caminhoFoto = `${EMPRESA_A}/bem/${A.bemEstacao1}/${randomUUID()}.jpg`;
       await s.query(
         `select public.rpc_registrar_evidencia('BEM', $1, 'FOTO', $2, 'image/jpeg', 100, $3)`,
-        [A.bemEstacao1, `${EMPRESA_A}/bem/${A.bemEstacao1}/${randomUUID()}.jpg`, "f".repeat(64)],
+        [A.bemEstacao1, caminhoFoto, "f".repeat(64)],
       );
       const id = await pedir(s, "LOCACAO", A.locacaoAtiva);
       await s.como(serviceRole);
@@ -163,7 +164,8 @@ describe("PDF do relatório de locação (CA-70)", () => {
         [id],
       );
       const snapshot = snapshotSchema.parse(linha?.snap);
-      expect(snapshot.evidencias).toHaveLength(1);
+      // O banco local pode ter fotos de execuções E2E; a recém-registrada tem de estar lá.
+      expect(snapshot.evidencias.map((e) => e.storage_path)).toContain(caminhoFoto);
       const hashDados = sha256Hex(jsonCanonico(linha?.snap));
       const jpeg = await sharp({
         create: { width: 64, height: 48, channels: 3, background: "#c04020" },
