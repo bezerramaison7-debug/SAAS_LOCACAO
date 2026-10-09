@@ -391,7 +391,8 @@ Ambientes **DEV** (Supabase CLI local), **HOMOLOGAÇÃO** e **PRODUÇÃO**: proj
 - Server Actions: `bodySizeLimit` baixo (1 MB); uploads apenas pelo Route Handler com limite de streaming.
 - Rate limit em upload, geração de relatório e ações sensíveis via tabela `limites_taxa` (sem dependência de Redis/KV) [D-20].
 - `npm audit --audit-level=high` no CI; Dependabot.
-- Backup: PITR/backups diários do Supabase (plano), procedimento de restore documentado e testado na Fase 9; retenção de evidências documentada (padrão: enquanto a empresa existir + 5 anos após encerramento da locação — **a validar**).
+- Backup: PITR/backups diários do Supabase + backup do Storage com manifesto SHA-256 (`scripts/backup/`), simulado de restauração testado na Fase 9 — `docs/backup.md` (D-82). Retenção: sem exclusão física pela aplicação; prazo proposto de 5 anos após o encerramento financeiro (**a validar**) — `docs/retencao.md` (D-83).
+- Revisão de segurança da Fase 9: `docs/seguranca.md`.
 
 ## 13. Pipeline CI/CD (GitHub Actions)
 
@@ -405,7 +406,7 @@ Ambientes **DEV** (Supabase CLI local), **HOMOLOGAÇÃO** e **PRODUÇÃO**: proj
 | Paridade   | Vitest                                                                              | matriz TS × `papel_permissoes`; transições TS × função SQL                                                                 |
 | Integração | Vitest + Postgres real (Supabase local)                                             | cada `rpc_*`, storage, auditoria na mesma transação                                                                        |
 | RLS        | Vitest + clientes com JWT por perfil (anon, cada papel de A, usuário de B, inativo) | SELECT/INSERT/UPDATE/"cancelar" por tabela crítica                                                                         |
-| E2E        | Playwright (375/768/1280; Chromium/Firefox/WebKit)                                  | 16 cenários da especificação + axe                                                                                         |
+| E2E        | Playwright (375/768/1280; Chromium em PR, + Firefox/WebKit diário — D-79)           | 16 cenários da especificação + axe + teclado (`docs/testes.md`)                                                            |
 
 Implementação (Fase 2): `tests/support/db.ts` executa cada teste numa transação **sempre revertida**, com `set local role anon|authenticated|service_role` e `request.jwt.claims` — o mesmo mecanismo do PostgREST — sobre o banco seedado. Suites: `tests/rls/` (estrutura, isolamento A×B, atores, storage) e `tests/integration/` (paridade TS×SQL, integridade, triggers/auditoria, saldo, seed) [D-32].
 

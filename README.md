@@ -2,7 +2,7 @@
 
 MicroSaaS web, multiempresa, para rastrear equipamentos locados **depois** do pedido de compra feito no Sectra: recebimento, vistoria fotográfica, localização, responsável, movimentações, ocorrências, devolução, encerramento de cobrança e relatório em PDF.
 
-> **Estado:** Fase 8 (painel e relatórios) concluída: indicadores clicáveis com regra explícita e relatórios PDF assíncronos por locação, bem, local e período, com fotos, legendas e hashes de integridade. Qualidade e homologação na Fase 9 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+> **Estado:** MVP completo (Fases 0–9). A Fase 9 fechou a qualidade e a homologação: E2E dos 16 cenários em 3 telas (e 3 navegadores no CI), acessibilidade e teclado, revisão de segurança sem falhas críticas/altas abertas, backup/restauração testados, guia de implantação e manual — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 
 ## Requisitos
 
@@ -75,8 +75,9 @@ Depois de alterar migrations: `npm run db:types` (atualiza `src/types/database.t
 | `npm run db:local:start` / `db:local:reset` / `db:types` | Banco local sem Docker / recriar / gerar tipos                                       |
 | `npm run check:bundle-secrets`                           | Garante que nenhum segredo foi parar no bundle do navegador                          |
 | `npm run validate`                                       | Formatação + lint + tipos + unit + build + varredura de segredos                     |
+| `npm run backup:testar`                                  | Simulado de backup e restauração (banco + Storage) em banco temporário               |
 
-`E2E_FULL=1 npm run e2e` inclui Firefox e WebKit (suíte pré-implantação).
+`E2E_FULL=1 npm run e2e` inclui Firefox e WebKit (suíte pré-implantação; no CI roda todo dia e sob demanda). Mapa dos cenários em [`docs/testes.md`](docs/testes.md).
 
 ## Estrutura
 
@@ -101,7 +102,13 @@ docs/              contrato técnico e estado do projeto
 | [`docs/permissions.md`](docs/permissions.md)       | Matriz de permissões                                                 |
 | [`docs/decisions.md`](docs/decisions.md)           | Decisões arquiteturais                                               |
 | [`docs/backlog.md`](docs/backlog.md)               | Fases, backlog e riscos                                              |
+| [`docs/deploy.md`](docs/deploy.md)                 | Implantação Vercel + Supabase, agendador do worker, checklist        |
+| [`docs/backup.md`](docs/backup.md)                 | Backup, restauração e o simulado testado                             |
+| [`docs/seguranca.md`](docs/seguranca.md)           | Revisão de segurança e achados                                       |
+| [`docs/retencao.md`](docs/retencao.md)             | Política de retenção de evidências e registros                       |
+| [`docs/testes.md`](docs/testes.md)                 | Camadas de teste, matriz de navegadores, 16 cenários                 |
+| [`docs/manual-usuario.md`](docs/manual-usuario.md) | Manual rápido por papel                                              |
 
 ## Deploy
 
-Instruções completas de implantação (Vercel + Supabase, ambientes DEV/HOMOLOGAÇÃO/PRODUÇÃO separados) serão documentadas até a Fase 9. Princípios já definidos em `docs/architecture.md §10–13`.
+Siga [`docs/deploy.md`](docs/deploy.md): um projeto Supabase e um conjunto de segredos por ambiente (DEV/HOMOLOGAÇÃO/PRODUÇÃO), `supabase db push` sem seed, banco de produção marcado com `app.ambiente = 'producao'`, variáveis na Vercel e agendador chamando `POST /api/reports/process` a cada minuto com `Authorization: Bearer <REPORT_SIGNING_SECRET>`.

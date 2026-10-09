@@ -30,6 +30,7 @@ Critério do gate: **nenhuma falha crítica ou alta aberta**.
 | S-3 | `rpc_registrar_evidencia` pode registrar uma evidência cujo arquivo não foi enviado (o servidor sempre envia antes; chamada direta exige sessão, empresa e permissão válidas e fica auditada)                               | Baixa                         | Aceito; endurecimento proposto: conferir `storage.objects` no registro                  |
 | S-4 | Página sem permissão responde HTTP 200 com conteúdo de 404 (streaming do layout)                                                                                                                                            | Baixa (informacional)         | Aceito (D-37); nenhum dado é exposto                                                    |
 | S-5 | Não há endpoint público para conferir o HMAC de um PDF recebido                                                                                                                                                             | Baixa                         | Pendência de produto; hashes visíveis na página do relatório                            |
+| S-6 | Primeira versão da conferência do backup do Storage confiava no manifesto sem recalcular o hash dos arquivos (adulteração não seria detectada)                                                                              | Média (integridade do backup) | **Corrigido** na Fase 9; adulteração agora falha a conferência (`docs/backup.md` §4)    |
 
 **Nenhuma falha crítica ou alta aberta.**
 
@@ -44,5 +45,6 @@ Critério do gate: **nenhuma falha crítica ou alta aberta**.
 
 - Ambientes separados (dev/homologação/produção) com projetos Supabase, buckets e segredos distintos; seed **nunca** em produção.
 - `NEXT_PUBLIC_SUPABASE_URL` em HTTPS; `REPORT_SIGNING_SECRET` com 32+ caracteres aleatórios; `SUPABASE_SERVICE_ROLE_KEY` só em variáveis de servidor.
-- Supabase Auth: confirmação de e-mail ligada, URLs de redirecionamento restritas ao domínio da aplicação, limite de tentativas padrão.
+- Supabase Auth: cadastro público desligado (acesso só por convite), URLs de redirecionamento restritas a `https://<dominio>/auth/confirm`, senha mínima de 10 caracteres com maiúsculas, minúsculas e dígitos, limite de tentativas padrão, SMTP próprio.
+- Backups diários + PITR e backup diário do Storage (`docs/backup.md`); retenção conforme `docs/retencao.md`.
 - Agendador do worker com `Authorization: Bearer <REPORT_SIGNING_SECRET>` (ver `docs/deploy.md`).

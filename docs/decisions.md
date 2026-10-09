@@ -427,3 +427,33 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 8)
 **Decisão:** A foto de teste dos E2E passou a ser um JPEG válido (24×16) — o JPEG mínimo anterior passava pela checagem de assinatura, mas não é decodificável, e o relatório corretamente o mostraria como "imagem indisponível".
+
+### D-79 — Matriz de navegadores no CI
+
+**Status:** Aceita (Fase 9)
+**Decisão:** PR e `main` rodam o E2E em Chromium nas três telas (375/768/1280 px); a matriz completa (Chromium, Firefox e WebKit × três telas, `E2E_FULL=1`) roda no job `navegadores`, todo dia às 05:17 UTC e sob demanda (`workflow_dispatch`). Firefox não suporta `isMobile`, então o celular nele usa só a viewport e o toque. Motivo: o tempo de PR fica aceitável e regressões de motor aparecem em até 24 h. O ambiente de desenvolvimento só tem Chromium; Firefox/WebKit são provados no CI.
+
+### D-80 — Acessibilidade e teclado como teste
+
+**Status:** Aceita (Fase 9)
+**Decisão:** O axe percorre 38 telas autenticadas (listas, detalhes e formulários, com dados do seed) nos temas claro e escuro, WCAG 2.2 A/AA, e falha com qualquer violação séria ou crítica. Fluxos críticos (login, ocorrência com diálogo de confirmação, movimentação) são cobertos só com teclado, exigindo foco visível em cada parada. Regiões roláveis (tabelas largas, etapas da locação) são focáveis e nomeadas (`role="region"`, `tabIndex=0`).
+
+### D-81 — Risco aceito em dependência de desenvolvimento
+
+**Status:** Aceita (Fase 9)
+**Decisão:** As 5 vulnerabilidades "altas" do `npm audit` completo vêm de uma única cadeia de lint (`eslint-config-next` → … → `braces`), que não vai para produção e só processa padrões glob do próprio repositório; não há versão corrigida compatível com o Next 16. O CI bloqueia qualquer vulnerabilidade alta em dependências de **produção** (`npm audit --omit=dev --audit-level=high`, hoje 0). Reavaliar a cada atualização do `eslint-config-next` (S-2 em `docs/seguranca.md`).
+
+### D-82 — Backup do Storage fora do backup do banco
+
+**Status:** Aceita (Fase 9)
+**Decisão:** PITR/backups diários do Supabase cobrem o banco, mas não os objetos do Storage. `scripts/backup/storage.mjs` baixa os quatro buckets com manifesto SHA-256, restaura sem sobrescrever e confere cada arquivo contra o hash do banco (evidências e relatórios). O simulado `npm run backup:testar` restaura sempre num banco **novo e temporário** e compara contagem e checksum de todas as tabelas — nunca restaura por cima da origem.
+
+### D-83 — Retenção sem exclusão física pela aplicação
+
+**Status:** Aceita (Fase 9) — prazos a validar pelo jurídico
+**Decisão:** A aplicação não apaga registros nem arquivos de evidência: remoção lógica com motivo, cancelamento, inativação. Prazo proposto: enquanto a empresa for cliente e até 5 anos após o encerramento financeiro da locação. O descarte ao fim do prazo é operação administrativa por empresa, documentada em `docs/retencao.md`; o script de descarte fica como pendência antes do primeiro encerramento de cliente.
+
+### D-84 — Falha transitória do Storage no worker de relatórios
+
+**Status:** Aceita (Fase 9)
+**Decisão:** No worker, erro de rede, 5xx ou 429 do Storage (`falhaTransitoria`) ao baixar uma foto **falha o job** (nova tentativa pela fila, D-76) em vez de virar "imagem indisponível" — o relatório concluído é imutável e não pode registrar como ausente uma foto que existe. Só resposta definitiva (objeto inexistente) vira aviso no PDF. O envio do PDF tem uma nova tentativa imediata, com caminho novo (sem sobrescrever). Encontrado na Fase 9: uma queda de conexão no envio deixava o relatório em ERRO até o próximo ciclo do agendador.

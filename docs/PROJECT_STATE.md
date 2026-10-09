@@ -2,9 +2,21 @@
 
 ## Fase atual
 
-**Fase 8 — Dashboard e relatórios: CONCLUÍDA, aguardando autorização para a Fase 9 (Qualidade e homologação).**
+**Fase 9 — Qualidade e homologação: CONCLUÍDA. Todas as fases do plano (0–9) estão concluídas; o MVP está pronto para a implantação em homologação conforme `docs/deploy.md`.**
 
 ## Última tarefa concluída
+
+Gate da Fase 9 atingido — **nenhuma falha crítica ou alta aberta** (`docs/seguranca.md`):
+
+- F9.1: suíte E2E completa (16 cenários mapeados em `docs/testes.md`) em 375/768/1280 px no Chromium; Firefox e WebKit no job `navegadores` do CI (diário e sob demanda — D-79).
+- F9.2: axe em 38 telas autenticadas × tema claro/escuro, sem violações sérias/críticas; fluxos só com teclado com foco visível (D-80). Corrigidas regiões roláveis sem foco (S-1).
+- F9.3: revisão de segurança com inventário automático das funções `security definer` (`tests/rls/estrutura.test.ts`), cabeçalhos/CSP, segredos e dependências (produção: 0 vulnerabilidades; dev: risco aceito D-81).
+- F9.4: backup/restauração testados — `npm run backup:testar` (59 tabelas idênticas; 8 arquivos conferidos por SHA-256; adulteração detectada; arquivo removido restaurado) — `docs/backup.md` (D-82).
+- F9.5: `docs/deploy.md`, `docs/manual-usuario.md`, README.
+- F9.6: `docs/retencao.md` (D-83; prazos a validar pelo jurídico).
+- Correções encontradas pela validação: conferência do backup recalcula o hash de cada arquivo (S-6); worker de relatórios não transforma falha de rede em "imagem indisponível" e tenta de novo o envio do PDF (D-84); três testes deixaram de depender de dados de execuções anteriores ou de esperas que casavam com texto já presente.
+
+## Gate anterior (Fase 8)
 
 Gate da Fase 8 atingido: o usuário gera o relatório completo da locação pela interface — com as fotos já registradas no sistema, baixadas do storage privado e normalizadas pelo servidor — sem manipular nenhum arquivo. Provado por E2E em 375/768/1280 px (pedido, acompanhamento até "Pronto", download por URL assinada, hash do arquivo conferido, PDF lido com todas as seções, foto desenhada e legenda) e por integração (CA-70: PDF renderizado e lido; fila, watchdog, permissões). CA-72: cada indicador do painel bate com o total da lista que abre, para ADMIN, FINANCEIRO e RESPONSAVEL_LOCAL.
 
@@ -62,7 +74,7 @@ Gate da Fase 8 atingido: o usuário gera o relatório completo da locação pela
 
 ## Próximas tarefas
 
-Fase 9 — suíte completa em 3 navegadores, acessibilidade e teclado, revisão de segurança, backup/restore, guia de deploy e manual.
+Fora do plano de fases (dependem de decisão do cliente): implantar homologação (`docs/deploy.md`), primeira execução do CI no GitHub (inclui a matriz Firefox/WebKit), validar prazos de retenção com o jurídico, e os itens P1/P2 parciais listados acima e em "Dívidas técnicas".
 
 ## Bugs conhecidos
 
@@ -70,11 +82,11 @@ Nenhum.
 
 ## Decisões tomadas
 
-D-01 a D-78 em `docs/decisions.md`. Novas na Fase 8: D-71 (indicadores pela consulta da lista), D-72 (pedido com `after()` e worker), D-73 (snapshot só para o worker), D-74 (template PDF), D-75 (integridade), D-76 (fila), D-77 (tipos de relatório), D-78 (foto de teste).
+D-01 a D-84 em `docs/decisions.md`. Novas na Fase 9: D-79 (matriz de navegadores no CI), D-80 (acessibilidade e teclado como teste), D-81 (risco aceito em dependência de desenvolvimento), D-82 (backup do Storage), D-83 (retenção), D-84 (falha transitória no worker). Na Fase 8: D-71 (indicadores pela consulta da lista), D-72 (pedido com `after()` e worker), D-73 (snapshot só para o worker), D-74 (template PDF), D-75 (integridade), D-76 (fila), D-77 (tipos de relatório), D-78 (foto de teste).
 
 ## Migrations aplicadas
 
-`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6), `20261008125000_devolucoes_cobrancas` (Fase 7), `20261008126000_painel_relatorios` (Fase 8).
+`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6), `20261008125000_devolucoes_cobrancas` (Fase 7), `20261008126000_painel_relatorios` (Fase 8). Fase 9: nenhuma migration nova.
 
 ## Variáveis/configurações necessárias
 
@@ -82,6 +94,7 @@ Sem variáveis novas: o worker usa `REPORT_SIGNING_SECRET` (já obrigatória). P
 
 ## Arquivos importantes
 
+- Fase 9: `docs/{deploy,backup,seguranca,retencao,testes,manual-usuario}.md`, `scripts/backup/{storage.mjs,testar.sh}`, `tests/e2e/{teclado,acessibilidade}.spec.ts`, `playwright.config.ts`, `.github/workflows/ci.yml`.
 - `src/features/painel/**`, `src/features/relatorios/**`, `src/lib/relatorios/**`, `src/app/(app)/{dashboard,relatorios}/**`, `src/app/api/reports/**`.
 - `supabase/migrations/20261008126000_painel_relatorios.sql`, `tests/integration/relatorios.test.ts`, `tests/e2e/{relatorios,painel}.spec.ts`.
 - `src/features/{devolucoes,cobrancas,encerramentos}/**`, `src/app/(app)/{devolucoes,cobrancas}/**`.
@@ -109,8 +122,10 @@ Nenhum.
 
 ## Dívidas técnicas
 
-- `npm audit` (dev): as mesmas vulnerabilidades da cadeia `eslint-config-next`; produção: 0.
-- CI (`supabase start`) ainda não executado no GitHub (nenhum PR aberto).
+- `npm audit` (dev): as mesmas vulnerabilidades da cadeia `eslint-config-next` (risco aceito, D-81); produção: 0.
+- CI (`supabase start` e matriz Firefox/WebKit) ainda não executado no GitHub (nenhum PR aberto); no ambiente de desenvolvimento só há Chromium.
+- `rpc_registrar_evidencia` não confere a existência do objeto no Storage (S-3, baixa).
+- Script de descarte por empresa ao fim da retenção não implementado (D-83).
 - Páginas sem permissão retornam HTTP 200 com conteúdo de 404 (D-37).
 - Imagens não são decodificadas no servidor (só _magic bytes_); PDF ativo detectado por varredura simples; sem job de limpeza de órfãos (D-49).
 - Abas do detalhe da locação limitadas a 200 linhas.
@@ -128,4 +143,4 @@ Nenhum.
 
 ## Próximo passo recomendado
 
-Aguardar autorização explícita para iniciar a **Fase 9 — Qualidade e homologação**.
+Todas as fases autorizadas foram concluídas. Aguardar instrução do cliente: implantação em homologação (`docs/deploy.md`) e priorização das pendências.
