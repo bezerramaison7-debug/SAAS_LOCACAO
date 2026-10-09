@@ -301,3 +301,43 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 5)
 **Decisão:** Testes E2E que dependem de quantidades contratadas criam a própria locação ativa diretamente no banco local (`tests/e2e/support/dados.ts`, recusa banco não local); todo o fluxo sob teste continua pela interface. Evita que dados acumulados entre execuções mudem o resultado (ex.: excesso).
+
+### D-54 — Movimentação de bem e de lote
+
+**Status:** Aceita (Fase 6)
+**Decisão:** `rpc_registrar_movimentacao` é a única forma de mudar local/responsável. Bem DISPONIVEL passa a EM_USO ao ser movimentado. Lote: sem quantidade (ou com o saldo inteiro) o lote todo muda; quantidade parcial cria um lote filho no destino (`lote_origem_id`), soma `quantidade_dividida` na origem e a linha do tempo do filho começa com "Criado por divisão do lote …". Movimentações confirmadas nunca são editadas: a correção é um novo evento ligado ao anterior (`corrige_movimentacao_id`).
+
+### D-55 — Aceite da transferência
+
+**Status:** Aceita (Fase 6)
+**Decisão:** Quando a empresa exige aceite (`exige_aceite_movimentacao`) e o responsável muda para outra pessoa, a movimentação fica `PENDENTE_ACEITE`, o bem fica EM_TRANSFERENCIA e local/responsável continuam os da origem. Só o destinatário aceita; ADMIN pode registrar aceite administrativo com justificativa (≥ 10), marcado na linha do tempo. Recusa exige motivo e devolve o bem à situação anterior; o autor ou ADMIN pode cancelar enquanto pendente. Pendência bloqueia nova movimentação, troca e é cancelada por extravio.
+
+### D-56 — Ordem cronológica dos eventos
+
+**Status:** Aceita (Fase 6)
+**Decisão:** A data do fato não pode estar no futuro nem ser anterior ao último evento confirmado do item (recebimento, divisão ou movimentação). Fatos no mesmo minuto (precisão do formulário) são ordenados pelo momento de registro: `linha_do_tempo` devolve `registrado_em` e ordena por data do fato e depois por registro. Invariante coberta por teste: local/responsável atuais = último evento confirmado.
+
+### D-57 — Ocorrências com efeito no estado
+
+**Status:** Aceita (Fase 6)
+**Decisão:** Extravio leva o bem a EXTRAVIADO (lote: quantidade extraviada reservada); defeito/avaria com "enviar para manutenção" leva a EM_MANUTENCAO. O status anterior é guardado na ocorrência; resolver ou cancelar restaura. Extravio só se resolve como ENCONTRADO (volta) ou INDENIZADO (bem BAIXADO; lote soma `quantidade_baixada`). Reabertura só para ocorrências sem efeito de estado (não troca/extravio). Prazo vencido = "vencida" (calculado na leitura). FINANCEIRO registra apenas divergência documental. Tratar/resolver/cancelar: ADMIN e OPERACAO.
+
+### D-58 — QR Code e etiqueta
+
+**Status:** Aceita (Fase 6)
+**Decisão:** O QR contém só `{NEXT_PUBLIC_APP_URL}/q/{id}` (nenhum dado do ativo). `/q/{id}` exige sessão (o proxy leva ao login com retorno) e resolve o id para bem ou lote da empresa ativa pela RLS; fora do escopo → 404. A etiqueta (`/etiquetas/{bem|lote}/{id}`) fica fora do layout do app para imprimir apenas o cartão; o SVG é gerado no servidor (`qrcode` 1.5.4) e servido como data URI (permitido por `img-src data:`), sem HTML injetado.
+
+### D-59 — Troca pelo fornecedor
+
+**Status:** Aceita (Fase 6)
+**Decisão:** `rpc_trocar_bem` cria o novo bem (`substitui_bem_id`) herdando local e responsável do antigo, encerra o antigo como SUBSTITUIDO, registra ocorrência TROCA já resolvida e abre vistoria de ENTRADA em rascunho para o novo bem (concluída na página da vistoria). O histórico do antigo permanece intacto; o novo mostra "Entrou em substituição".
+
+### D-60 — Vistoria periódica, AUDITOR e "meus itens"
+
+**Status:** Aceita (Fase 6)
+**Decisão:** Vistorias avulsas são apenas PERIODICA (`rpc_iniciar_vistoria`), usando a versão vigente do checklist da categoria; são respondidas e concluídas em `/vistorias/{id}` (`rpc_concluir_vistoria` valida as mesmas pendências da entrada, inclusive fotos exigidas). AUDITOR não pode ser responsável por bens (somente leitura). "Só meus itens" em `/bens` filtra pelo responsável atual = usuário logado.
+
+### D-61 — Aceite no E2E usa a empresa B
+
+**Status:** Aceita (Fase 6)
+**Decisão:** O seed já configura a Empresa B exigindo aceite e a A sem aceite. O E2E testa cada modo na sua empresa, sem alternar a configuração (os três tamanhos de tela rodam em paralelo). Os ativos de cada teste são criados no banco local (`criarAtivosRecebidos`, como D-53).

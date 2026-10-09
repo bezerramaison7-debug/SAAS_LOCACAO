@@ -218,21 +218,22 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 
 ### 4.4 Migrations (Fase 2)
 
-| Arquivo                                                       | Conteúdo                                                                                             |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `20261008120000_fundacao_tipos.sql`                           | extensões, esquema `privado`, enums, tabela de transições                                            |
-| `20261008120100_nucleo_multiempresa.sql`                      | empresas, perfis, usuarios_empresa, papel_permissoes, funções de segurança, sequências               |
-| `20261008120200_cadastros.sql`                                | fornecedores, locais, centros de custo, checklists versionados, categorias                           |
-| `20261008120300_locacoes_ativos.sql`                          | locações, referências externas, itens, recebimentos, bens, lotes, itens de recebimento               |
-| `20261008120400_eventos.sql`                                  | vistorias, respostas, movimentações, ocorrências, devoluções, itens de devolução, cobranças          |
-| `20261008120500_evidencias_relatorios_auditoria.sql`          | evidências, relatórios, auditoria, auditoria de autenticação, limite de taxa                         |
-| `20261008120600_triggers.sql`                                 | autoria, códigos, guarda de transição, auditoria, imutabilidade, último ADMIN, consistência          |
-| `20261008120700_visoes_saldo.sql`                             | `status_bem_ativo`, `v_saldo_item_locacao`, `v_saldo_locacao` (security_invoker)                     |
-| `20261008120800_rls_privilegios.sql`                          | revogação dos padrões do Supabase, grants por coluna, RLS de todas as tabelas                        |
-| `20261008120900_storage.sql`                                  | buckets privados e policies de leitura                                                               |
-| `20261008121000_usuarios_autenticacao.sql` (Fase 3)           | administração de usuários e auditoria de autenticação                                                |
-| `20261008122000_locacoes_cadastros.sql` (Fase 4)              | pendências/ativação/cancelamento de locação, `buscar_locacoes`, publicar/nova versão de checklist    |
-| `20261008123000_recebimento_vistoria_evidencias.sql` (Fase 5) | recebimento transacional, excesso, descarte/cancelamento, vistoria de entrada, respostas, evidências |
+| Arquivo                                                       | Conteúdo                                                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `20261008120000_fundacao_tipos.sql`                           | extensões, esquema `privado`, enums, tabela de transições                                              |
+| `20261008120100_nucleo_multiempresa.sql`                      | empresas, perfis, usuarios_empresa, papel_permissoes, funções de segurança, sequências                 |
+| `20261008120200_cadastros.sql`                                | fornecedores, locais, centros de custo, checklists versionados, categorias                             |
+| `20261008120300_locacoes_ativos.sql`                          | locações, referências externas, itens, recebimentos, bens, lotes, itens de recebimento                 |
+| `20261008120400_eventos.sql`                                  | vistorias, respostas, movimentações, ocorrências, devoluções, itens de devolução, cobranças            |
+| `20261008120500_evidencias_relatorios_auditoria.sql`          | evidências, relatórios, auditoria, auditoria de autenticação, limite de taxa                           |
+| `20261008120600_triggers.sql`                                 | autoria, códigos, guarda de transição, auditoria, imutabilidade, último ADMIN, consistência            |
+| `20261008120700_visoes_saldo.sql`                             | `status_bem_ativo`, `v_saldo_item_locacao`, `v_saldo_locacao` (security_invoker)                       |
+| `20261008120800_rls_privilegios.sql`                          | revogação dos padrões do Supabase, grants por coluna, RLS de todas as tabelas                          |
+| `20261008120900_storage.sql`                                  | buckets privados e policies de leitura                                                                 |
+| `20261008121000_usuarios_autenticacao.sql` (Fase 3)           | administração de usuários e auditoria de autenticação                                                  |
+| `20261008122000_locacoes_cadastros.sql` (Fase 4)              | pendências/ativação/cancelamento de locação, `buscar_locacoes`, publicar/nova versão de checklist      |
+| `20261008123000_recebimento_vistoria_evidencias.sql` (Fase 5) | recebimento transacional, excesso, descarte/cancelamento, vistoria de entrada, respostas, evidências   |
+| `20261008124000_movimentacoes_ocorrencias.sql` (Fase 6)       | movimentação/aceite/divisão de lote, ocorrências com efeito, troca, vistoria periódica, linha do tempo |
 
 Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `npm run db:types`; o CI falha se estiver desatualizado).
 
@@ -242,6 +243,13 @@ Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `np
 - `src/features/locacoes`: `filtros.ts` (URL → filtros), `schemas.ts` (etapas, itens, vigência), `queries.ts`/`abas.ts` (leitura com `::text` em numéricos), `actions.ts` (etapas, referências, itens, ativação/cancelamento por RPC).
 - Rotas: `/cadastros/**`, `/locacoes`, `/locacoes/nova`, `/locacoes/[id]?aba=`, `/locacoes/[id]/editar?etapa=` (D-42, D-45).
 - `AcaoConfirmada` (`src/components/forms`): toda ação crítica passa por diálogo de confirmação; cancelamento exige motivo (mín. 10).
+
+### 4.6 Movimentações e ocorrências (Fase 6)
+
+- `src/features/movimentacoes` (schemas, queries, actions, formulário) e `src/app/(app)/movimentacoes/**` (lista com "aguardando o seu aceite", nova, detalhe com aceitar/recusar/aceite administrativo/cancelar).
+- `src/features/ocorrencias` e `src/app/(app)/ocorrencias/**` (visões em aberto/vencidas/resolvidas, tratar, resolver, reabrir, cancelar, fotos e documentos).
+- Ficha do bem/lote: `CabecalhoFicha` (alertas de pendências e ações possíveis no estado atual), `LinhaDoTempo` (RPC `linha_do_tempo`), troca (`/bens/[id]/troca`), QR (`src/lib/qr`), `/q/[id]` e `/etiquetas/[tipo]/[id]` (fora do layout).
+- Vistoria avulsa editável em `/vistorias/[id]` enquanto RASCUNHO (a de recebimento continua no fluxo do recebimento).
 
 ## 5. Camadas de autorização (defesa em profundidade)
 

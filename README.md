@@ -2,7 +2,7 @@
 
 MicroSaaS web, multiempresa, para rastrear equipamentos locados **depois** do pedido de compra feito no Sectra: recebimento, vistoria fotográfica, localização, responsável, movimentações, ocorrências, devolução, encerramento de cobrança e relatório em PDF.
 
-> **Estado:** Fase 5 (recebimento e evidências) concluída: recebimento em etapas no celular com bens, lotes, checklist de entrada e fotos privadas, autorização de excesso e telas de bens e vistorias. Movimentações e ocorrências a partir da Fase 6 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
+> **Estado:** Fase 6 (movimentações e ocorrências) concluída: transferências com e sem aceite, divisão de lote, ficha com linha do tempo imutável, ocorrências (manutenção, extravio, prazos), troca pelo fornecedor, vistoria periódica e QR Code com etiqueta. Devoluções e cobranças a partir da Fase 7 — veja [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md).
 
 ## Requisitos
 

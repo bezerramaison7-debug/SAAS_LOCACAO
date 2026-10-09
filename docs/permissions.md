@@ -182,3 +182,21 @@ Provas: `tests/e2e/{cadastros,locacoes}.spec.ts` (3 viewports), `tests/integrati
 | `/bens`, `/vistorias`          | qualquer membro; RESPONSAVEL_LOCAL vê só o que está sob sua responsabilidade | RLS `pode_ler` ou `ve_bem`/`ve_lote`                                                    |
 
 Provas: `tests/integration/recebimentos.test.ts`, `tests/e2e/recebimentos.spec.ts` (inclui origem externa, outra empresa, conteúdo inválido e acesso anônimo).
+
+## 11. Movimentações, ocorrências, troca e QR (Fase 6)
+
+| Recurso                                | Interface/servidor                                           | Banco                                                                            |
+| -------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Registrar movimentação                 | `movimentacao.registrar` (ADMIN, OPERACAO)                   | `rpc_registrar_movimentacao` (INSERT/UPDATE diretos revogados)                   |
+| Aceitar / recusar                      | destinatário da movimentação                                 | `rpc_aceitar_movimentacao` / `rpc_recusar_movimentacao`                          |
+| Aceite administrativo                  | ADMIN, com justificativa                                     | `rpc_aceitar_movimentacao(p_justificativa)`                                      |
+| Cancelar pendente                      | autor ou ADMIN, com motivo                                   | `rpc_cancelar_movimentacao`                                                      |
+| Registrar ocorrência                   | `ocorrencia.registrar`; FINANCEIRO só divergência documental | `rpc_registrar_ocorrencia`                                                       |
+| Tratar / resolver / reabrir / cancelar | `ocorrencia.tratar` (ADMIN, OPERACAO)                        | `rpc_tratar/resolver/reabrir/cancelar_ocorrencia`                                |
+| Troca                                  | `troca.registrar` (ADMIN, OPERACAO)                          | `rpc_trocar_bem`                                                                 |
+| Vistoria periódica                     | `vistoria.registrar`                                         | `rpc_iniciar_vistoria`, `rpc_salvar_respostas_vistoria`, `rpc_concluir_vistoria` |
+| Linha do tempo                         | quem lê o bem/lote                                           | `linha_do_tempo` (security invoker: cada fonte filtrada pela RLS)                |
+| `/q/{id}` e etiqueta                   | sessão + empresa ativa; fora do escopo = 404                 | RLS de `bens`/`lotes`                                                            |
+| Responsável por bem                    | membros ativos exceto AUDITOR                                | `privado.validar_responsavel`                                                    |
+
+Provas: `tests/integration/movimentacoes.test.ts`, `tests/e2e/movimentacoes.spec.ts`.
