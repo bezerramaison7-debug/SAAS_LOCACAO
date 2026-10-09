@@ -234,6 +234,7 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 | `20261008122000_locacoes_cadastros.sql` (Fase 4)              | pendências/ativação/cancelamento de locação, `buscar_locacoes`, publicar/nova versão de checklist      |
 | `20261008123000_recebimento_vistoria_evidencias.sql` (Fase 5) | recebimento transacional, excesso, descarte/cancelamento, vistoria de entrada, respostas, evidências   |
 | `20261008124000_movimentacoes_ocorrencias.sql` (Fase 6)       | movimentação/aceite/divisão de lote, ocorrências com efeito, troca, vistoria periódica, linha do tempo |
+| `20261008125000_devolucoes_cobrancas.sql` (Fase 7)            | devolução em etapas, vistoria de saída, comprovante, ciência, cobranças, estimativa, encerramentos     |
 
 Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `npm run db:types`; o CI falha se estiver desatualizado).
 
@@ -250,6 +251,12 @@ Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `np
 - `src/features/ocorrencias` e `src/app/(app)/ocorrencias/**` (visões em aberto/vencidas/resolvidas, tratar, resolver, reabrir, cancelar, fotos e documentos).
 - Ficha do bem/lote: `CabecalhoFicha` (alertas de pendências e ações possíveis no estado atual), `LinhaDoTempo` (RPC `linha_do_tempo`), troca (`/bens/[id]/troca`), QR (`src/lib/qr`), `/q/[id]` e `/etiquetas/[tipo]/[id]` (fora do layout).
 - Vistoria avulsa editável em `/vistorias/[id]` enquanto RASCUNHO (a de recebimento continua no fluxo do recebimento).
+
+### 4.7 Devoluções, cobranças e encerramentos (Fase 7)
+
+- `src/features/devolucoes` (schemas, queries, actions, formulários de solicitação, agendamento e retirada) e `src/app/(app)/devolucoes/**` (lista com visões e pendências, nova a partir da locação, detalhe com itens, vistoria de saída, comprovante, conferência e ciência).
+- `src/features/cobrancas` e `src/app/(app)/cobrancas/**` (lista com pendências do financeiro, registro, detalhe com conferir/divergir/resolver e documento); `EstimativaLocacao` na aba Cobranças da locação.
+- `src/features/encerramentos` (`PainelEncerramentos` na página da locação: operacional e financeiro lado a lado, cada um com pendências e ação próprias).
 
 ## 5. Camadas de autorização (defesa em profundidade)
 

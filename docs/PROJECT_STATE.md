@@ -2,15 +2,26 @@
 
 ## Fase atual
 
-**Fase 6 — Movimentações e ocorrências: CONCLUÍDA, aguardando autorização para a Fase 7 (Devoluções e cobranças).**
+**Fase 7 — Devolução e financeiro: CONCLUÍDA, aguardando autorização para a Fase 8 (Dashboard e relatórios).**
 
 ## Última tarefa concluída
 
-Gate da Fase 6 atingido: local e responsável atuais de bens e lotes = último evento confirmado, com o histórico intacto. Provado por teste de invariante no banco e por E2E em 375/768/1280 px: movimentação sem aceite (Empresa A), com aceite/recusa pelo destinatário (Empresa B), divisão de lote, manutenção e extravio, troca, vistoria periódica e QR Code.
+Gate da Fase 7 atingido: encerramentos operacional e financeiro independentes. Provado por integração (CA-50..55: saldo só muda na retirada, retirada nunca encerra cobrança, saldo zerado → encerramento pendente, nenhum encerramento altera o outro, nas duas ordens) e por E2E em 375/768/1280 px (devolução parcial de lote e de bem individual com vistoria de saída e comprovante; financeiro encerra com data enquanto a operação segue em devolução; depois a operação encerra sem tocar no financeiro).
 
 ## Funcionalidades concluídas
 
 **Fases 1–4:** fundação, banco multiempresa com RLS, autenticação real, usuários, cadastros, locações em etapas com Sectra manual, lista e detalhe.
+
+**Fase 7:**
+
+- Devolução em etapas (D-62..D-66): solicitação a partir da locação (bens e quantidades de lote, com reserva), agendamento/reagendamento, vistoria de saída por item, retirada (parcial, condição, quem recebeu pelo fornecedor, retirada imediata), comprovante, conferência, cancelamento com motivo, ciência financeira.
+- Desmobilização automática quando as devoluções cobrem todo o saldo, revertida se a devolução for cancelada (D-64); desmobilização manual.
+- Encerramento operacional e financeiro independentes, com pendências explicadas no painel da locação (D-67).
+- Cobranças: registrar, conferir, divergir, resolver, documento anexo; pendências do financeiro (encerramentos e ciências) em `/cobrancas` (D-69).
+- Estimativa do período com o aviso de RN-72 (D-68).
+- Linha do tempo com solicitação e retirada da devolução.
+- Correção: envio de arquivo só após a hidratação (causa da falha intermitente da Fase 6 — D-70).
+- Migration 015 `20261008125000_devolucoes_cobrancas`.
 
 **Fase 6:**
 
@@ -38,14 +49,14 @@ Gate da Fase 6 atingido: local e responsável atuais de bens e lotes = último e
 
 ## Funcionalidades parciais
 
-- Devoluções, cobranças, relatórios e painel ainda exibem "disponível a partir da Fase N" (D-28).
+- Relatórios e painel ainda exibem "disponível a partir da Fase N" (D-28).
 - Vistoria periódica é iniciada manualmente; agendamento/lembrete de periodicidade não foi implementado (F6.8, P2).
 - F5.7 (geolocalização opcional nas fotos, P1): a API já aceita latitude/longitude, mas a interface não as coleta.
 - F4.7 (aditivo de itens, P1) continua pendente (D-46).
 
 ## Próximas tarefas
 
-Fase 7 — devoluções (total/parcial, vistoria de saída) e cobranças.
+Fase 8 — painel com indicadores clicáveis, alertas e relatórios assíncronos em PDF com fotos e hash.
 
 ## Bugs conhecidos
 
@@ -53,11 +64,11 @@ Nenhum.
 
 ## Decisões tomadas
 
-D-01 a D-61 em `docs/decisions.md`. Novas na Fase 6: D-54 (movimentação e divisão), D-55 (aceite), D-56 (ordem cronológica), D-57 (ocorrências com efeito), D-58 (QR e etiqueta), D-59 (troca), D-60 (vistoria periódica, AUDITOR, meus itens), D-61 (aceite no E2E).
+D-01 a D-70 em `docs/decisions.md`. Novas na Fase 7: D-62 (devolução só por funções), D-63 (vistoria de saída), D-64 (desmobilização automática), D-65 (retirada parcial), D-66 (comprovante), D-67 (encerramentos), D-68 (estimativa), D-69 (cobranças), D-70 (envio após hidratação).
 
 ## Migrations aplicadas
 
-`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6).
+`20261008120000` … `20261008120900` (Fase 2), `20261008121000` (Fase 3), `20261008122000` (Fase 4), `20261008123000_recebimento_vistoria_evidencias` (Fase 5), `20261008124000_movimentacoes_ocorrencias` (Fase 6), `20261008125000_devolucoes_cobrancas` (Fase 7).
 
 ## Variáveis/configurações necessárias
 
@@ -65,6 +76,8 @@ Sem variáveis novas (o QR usa `NEXT_PUBLIC_APP_URL`). Homologação/produção:
 
 ## Arquivos importantes
 
+- `src/features/{devolucoes,cobrancas,encerramentos}/**`, `src/app/(app)/{devolucoes,cobrancas}/**`.
+- `supabase/migrations/20261008125000_devolucoes_cobrancas.sql`, `tests/integration/devolucoes.test.ts`, `tests/e2e/devolucoes.spec.ts`.
 - `src/features/movimentacoes/**`, `src/features/ocorrencias/**`, `src/features/bens/{ficha,linha-do-tempo,form-troca,actions}.tsx?`, `src/lib/qr/qr.ts`.
 - `src/app/(app)/{movimentacoes,ocorrencias,q}/**`, `src/app/etiquetas/**`, `src/app/(app)/bens/[id]/troca`.
 - `supabase/migrations/20261008124000_movimentacoes_ocorrencias.sql`, `tests/integration/movimentacoes.test.ts`, `tests/e2e/movimentacoes.spec.ts`.
@@ -77,14 +90,14 @@ Sem variáveis novas (o QR usa `NEXT_PUBLIC_APP_URL`). Homologação/produção:
 
 ## Testes atualmente passando
 
-- Unit: 255 (30 arquivos).
-- Integração: 129 (8 arquivos).
+- Unit: 262 (32 arquivos).
+- Integração: 144 (9 arquivos).
 - RLS: 235 (4 arquivos).
-- E2E (Chromium 375/768/1280, Auth e Storage reais): 288 passando, 11 pulados por aplicabilidade.
+- E2E (Chromium 375/768/1280, Auth e Storage reais): 294 passando, 11 pulados por aplicabilidade.
 
 ## Testes atualmente falhando
 
-Nenhum. Observado uma vez (não reproduzido em 2 execuções completas e 15 repetições isoladas): "Arquivo enviado." não apareceu a tempo no envio de contrato em 375 px.
+Nenhum. A falha intermitente da Fase 6 (envio de contrato) teve a causa encontrada e corrigida (D-70).
 
 ## Dívidas técnicas
 
@@ -94,6 +107,8 @@ Nenhum. Observado uma vez (não reproduzido em 2 execuções completas e 15 repe
 - Imagens não são decodificadas no servidor (só _magic bytes_); PDF ativo detectado por varredura simples; sem job de limpeza de órfãos (D-49).
 - Abas do detalhe da locação limitadas a 200 linhas.
 - `/vistorias` e `/movimentacoes` sem busca por bem/lote (filtro só por situação).
+- Retirada confirmada não pode ser desfeita pela interface (o banco já prevê ENCERRAMENTO_PENDENTE → EM_COBRANCA para um cancelamento administrativo futuro).
+- Filtros "sem comprovante"/"sem documento" consideram até 1000 registros por consulta.
 
 ## Ambiente de desenvolvimento observado
 
@@ -102,4 +117,4 @@ Nenhum. Observado uma vez (não reproduzido em 2 execuções completas e 15 repe
 
 ## Próximo passo recomendado
 
-Aguardar autorização explícita para iniciar a **Fase 7 — Devoluções e cobranças**.
+Aguardar autorização explícita para iniciar a **Fase 8 — Dashboard e relatórios**.

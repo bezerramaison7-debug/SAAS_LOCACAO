@@ -341,3 +341,49 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 
 **Status:** Aceita (Fase 6)
 **Decisão:** O seed já configura a Empresa B exigindo aceite e a A sem aceite. O E2E testa cada modo na sua empresa, sem alternar a configuração (os três tamanhos de tela rodam em paralelo). Os ativos de cada teste são criados no banco local (`criarAtivosRecebidos`, como D-53).
+
+### D-62 — Devolução só por funções de domínio
+
+**Status:** Aceita (Fase 7)
+**Decisão:** INSERT/UPDATE/DELETE diretos em `devolucoes` e `itens_devolucao` foram revogados; tudo passa por `rpc_*` (estado, saldo e reservas na mesma transação, com a locação travada). A solicitação já nasce SOLICITADA (o rascunho não é exposto na interface). "Retirada imediata" registra o agendamento com a data da retirada no mesmo passo, preservando as duas etapas (§4.9).
+
+### D-63 — Vistoria de saída por item
+
+**Status:** Aceita (Fase 7)
+**Decisão:** `vistorias.item_devolucao_id` liga a vistoria SAIDA ao item da devolução (uma ativa por item). Quando a categoria tem checklist, a retirada de quantidade > 0 exige a vistoria concluída (mesmas pendências da entrada, inclusive fotos). Item com quantidade 0 não precisa de vistoria; a vistoria em rascunho é cancelada.
+
+### D-64 — Desmobilização automática e reversão (D-15)
+
+**Status:** Aceita (Fase 7)
+**Decisão:** Quando as devoluções abertas cobrem todo o saldo (todo bem ativo solicitado e todo lote reservado), a locação ATIVA passa a EM_DEVOLUCAO e guarda a devolução causadora (`desmobilizacao_devolucao_id`). Cancelar essa devolução volta a locação a ATIVA se nenhuma outra devolução aberta cobrir o saldo. Desmobilização manual (`rpc_iniciar_desmobilizacao`) não é revertida automaticamente. Retirada que zera o saldo de locação ATIVA também a leva a EM_DEVOLUCAO.
+
+### D-65 — Retirada parcial e itens que não saem
+
+**Status:** Aceita (Fase 7)
+**Decisão:** Toda linha ativa precisa de quantidade retirada explícita (0 a solicitada). Quantidade 0 libera o item (bem volta ao estado anterior; reserva do lote liberada). Bem extraviado durante a devolução não pode ser retirado; ao liberar o item, o "estado anterior" da ocorrência de extravio é corrigido para o estado anterior real. Confirmar com tudo zero é recusado (cancele a devolução).
+
+### D-66 — Comprovante e conferência
+
+**Status:** Aceita (Fase 7)
+**Decisão:** Comprovante (bucket `comprovantes`) só pode ser anexado à devolução com retirada confirmada. A conferência exige comprovante ativo e marca `comprovante_confirmado`. Devoluções retiradas sem comprovante aparecem em "Sem comprovante" (evidências pendentes).
+
+### D-67 — Encerramentos independentes
+
+**Status:** Aceita (Fase 7)
+**Decisão:** Operacional (`rpc_encerrar_operacional`, ADMIN/OPERACAO): exige EM_DEVOLUCAO, nenhum bem ativo, saldo de lotes zero e nenhuma devolução aguardando retirada (`pendencias_encerramento_operacional` mostra o motivo). Financeiro (`rpc_encerrar_financeiro`, ADMIN/FINANCEIRO): exige ENCERRAMENTO_PENDENTE, data não futura (fuso da empresa) e não anterior ao início efetivo, e nenhuma cobrança PENDENTE/DIVERGENTE. Funções, permissões, campos e auditoria distintos; nenhuma chama a outra. Locação com encerramento financeiro congela as cobranças.
+
+### D-68 — Estimativa de cobrança
+
+**Status:** Aceita (Fase 7)
+**Decisão:** `estimativa_locacao` calcula no banco (numeric) unidades × dias de posse no período por item: conta o dia em que a posse começa (recebimento ou troca) e não o dia em que termina (retirada, troca ou indenização); valor ÷ 1/7/15/30 conforme a periodicidade (S-04). Exige `cobranca.ver_estimativa`. A tela sempre exibe o aviso de RN-72 e a regra.
+
+### D-69 — Cobranças
+
+**Status:** Aceita (Fase 7)
+**Decisão:** Registro e transições só por função (ADMIN/FINANCEIRO): PENDENTE→CONFERIDA; PENDENTE|CONFERIDA→DIVERGENTE (motivo ≥ 10); DIVERGENTE→RESOLVIDA (resolução ≥ 10, imutável depois). A primeira cobrança leva NAO_INICIADO→EM_COBRANCA (RN-74); com o saldo zerado o status continua ENCERRAMENTO_PENDENTE. Valor com 2 casas, competência com fim ≥ início. Documento anexado como evidência DOCUMENTO da cobrança.
+
+### D-70 — Envio de arquivo só após a hidratação
+
+**Status:** Aceita (Fase 7)
+**Contexto:** A falha intermitente da Fase 6 ("Arquivo enviado." não aparecia) foi reproduzida: um arquivo escolhido antes da hidratação era ignorado sem aviso, porque o `onChange` do React ainda não existia.
+**Decisão:** Campos controlados pelo React (envio de arquivo, tipo de ocorrência, categoria/unidade do item, tipo/opções/regra de foto da pergunta) ficam desabilitados até a hidratação (`useHidratado`, via `useSyncExternalStore`): antes dela, um arquivo escolhido era ignorado e um tipo de ocorrência escolhido era revertido pelo React. Os testes E2E usam `anexar()`, que espera o campo habilitado (seleção e digitação já esperam por padrão).

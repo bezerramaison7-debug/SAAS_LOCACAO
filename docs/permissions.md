@@ -200,3 +200,20 @@ Provas: `tests/integration/recebimentos.test.ts`, `tests/e2e/recebimentos.spec.t
 | Responsável por bem                    | membros ativos exceto AUDITOR                                | `privado.validar_responsavel`                                                    |
 
 Provas: `tests/integration/movimentacoes.test.ts`, `tests/e2e/movimentacoes.spec.ts`.
+
+## 12. Devoluções, cobranças e encerramentos (Fase 7)
+
+| Recurso                                         | Interface/servidor                                                                  | Banco                                                                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/devolucoes` (consulta)                        | `dados.ler_geral`                                                                   | RLS `pode_ler`                                                                                                                                            |
+| Solicitar, agendar, retirar, conferir, cancelar | `devolucao.gerenciar` (ADMIN, OPERACAO)                                             | `rpc_solicitar_devolucao`, `rpc_agendar_devolucao`, `rpc_confirmar_retirada`, `rpc_conferir_devolucao`, `rpc_cancelar_devolucao`; escrita direta revogada |
+| Vistoria de saída                               | `vistoria.registrar`                                                                | `rpc_iniciar_vistoria_saida` + funções de vistoria                                                                                                        |
+| Comprovante                                     | `evidencia.enviar`; só após a retirada                                              | `validar_anexo`                                                                                                                                           |
+| Ciência financeira                              | `devolucao.ciencia_financeira` (ADMIN, FINANCEIRO)                                  | `rpc_dar_ciencia_devolucao`                                                                                                                               |
+| Iniciar desmobilização / encerrar operação      | `locacao.iniciar_desmobilizacao` / `locacao.encerrar_operacional` (ADMIN, OPERACAO) | `rpc_iniciar_desmobilizacao` / `rpc_encerrar_operacional`                                                                                                 |
+| Encerramento financeiro                         | `locacao.encerrar_financeiro` (ADMIN, FINANCEIRO), com data                         | `rpc_encerrar_financeiro`                                                                                                                                 |
+| `/cobrancas` (consulta)                         | `valores.ver`                                                                       | RLS `valores.ver`                                                                                                                                         |
+| Registrar, conferir, divergir, resolver         | `cobranca.gerenciar` (ADMIN, FINANCEIRO)                                            | `rpc_registrar_cobranca`, `rpc_conferir_cobranca`, `rpc_marcar_cobranca_divergente`, `rpc_resolver_cobranca`                                              |
+| Estimativa                                      | `cobranca.ver_estimativa` (ADMIN, COMPRAS, FINANCEIRO, GESTOR, AUDITOR)             | `estimativa_locacao`                                                                                                                                      |
+
+Provas: `tests/integration/devolucoes.test.ts`, `tests/e2e/devolucoes.spec.ts`.
