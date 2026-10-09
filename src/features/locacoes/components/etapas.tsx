@@ -8,7 +8,8 @@ import { ETAPAS, ROTULO_ETAPA, type Etapa } from "../schemas";
 export function EtapasLocacao({ atual, locacaoId }: { atual: Etapa; locacaoId?: string }) {
   const indiceAtual = ETAPAS.indexOf(atual);
   return (
-    <nav aria-label="Etapas da locação" className="mb-6 overflow-x-auto">
+    // tabIndex: na criação as etapas ainda não são links e a faixa pode rolar (WCAG 2.1.1).
+    <nav aria-label="Etapas da locação" tabIndex={0} className="mb-6 overflow-x-auto">
       <ol className="flex min-w-max gap-2">
         {ETAPAS.map((etapa, i) => {
           const conteudo = (

@@ -7,66 +7,74 @@ import { arquivoSessao } from "./support/usuarios";
 
 test.use({ storageState: arquivoSessao("adminA") });
 
+/** Todas as telas principais (listas, detalhes e formulários), com dados do seed (F9.2). */
+const ROTAS = [
+  "/dashboard",
+  "/locacoes",
+  `/locacoes/${A.locacaoAtiva}`,
+  `/locacoes/${A.locacaoAtiva}?aba=itens`,
+  `/locacoes/${A.locacaoAtiva}?aba=cobrancas`,
+  "/locacoes/nova",
+  "/recebimentos",
+  `/recebimentos/${A.recebimentoAtiva}`,
+  "/bens",
+  "/bens?tipo=lotes",
+  `/bens/${A.bemEstacao1}`,
+  `/bens/lotes/${A.loteAndaime}`,
+  `/etiquetas/bem/${A.bemEstacao1}`,
+  "/movimentacoes",
+  `/movimentacoes/nova?bem=${A.bemEstacao2}`,
+  "/vistorias",
+  `/vistorias/${A.vistoriaBem1}`,
+  "/ocorrencias",
+  `/ocorrencias/${A.ocorrenciaBem2}`,
+  `/ocorrencias/nova?bem=${A.bemEstacao2}`,
+  "/devolucoes",
+  `/devolucoes/${A.devolucao}`,
+  `/devolucoes/nova?locacao=${A.locacaoAtiva}`,
+  "/cobrancas",
+  `/cobrancas/${A.cobranca}`,
+  "/cobrancas/nova",
+  "/relatorios",
+  "/cadastros",
+  "/cadastros/fornecedores",
+  `/cadastros/fornecedores/${A.fornecedor1}`,
+  "/cadastros/locais",
+  "/cadastros/centros-custo",
+  "/cadastros/categorias",
+  "/cadastros/checklists",
+  `/cadastros/checklists/${A.modelo}`,
+  "/configuracoes",
+  "/configuracoes/usuarios",
+  "/nao-existe",
+];
+
 for (const tema of ["claro", "escuro"] as const) {
-  test(`sem violações sérias de acessibilidade (WCAG A/AA) — tema ${tema}`, async ({
+  test(`todas as telas sem violações sérias de acessibilidade (WCAG 2.2 A/AA) — tema ${tema}`, async ({
     page,
     context,
     baseURL,
   }) => {
+    // ~38 telas com axe por tema: o orçamento padrão de 30 s não basta.
+    test.setTimeout(300_000);
     await context.addCookies([{ name: "tema", value: tema, url: baseURL ?? "" }]);
-    for (const rota of ["/dashboard", "/locacoes", "/nao-existe"]) {
+    const graves: string[] = [];
+    for (const rota of ROTAS) {
       await page.goto(rota);
       await expect(page.locator("html")).toHaveAttribute("data-theme", tema);
+      await expect(page.locator("main").first()).toBeVisible();
       const resultado = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
         .analyze();
-      const graves = resultado.violations.filter(
-        (v) => v.impact === "serious" || v.impact === "critical",
+      graves.push(
+        ...resultado.violations
+          .filter((v) => v.impact === "serious" || v.impact === "critical")
+          .map((v) => `${rota}: ${v.id} (${v.nodes.length})`),
       );
-      expect(
-        graves.map((v) => `${rota}: ${v.id} (${v.nodes.length})`),
-        "violações sérias/críticas",
-      ).toEqual([]);
     }
+    expect(graves, "violações sérias/críticas").toEqual([]);
   });
 }
-
-test("telas das Fases 6 a 8 sem violações sérias de acessibilidade", async ({ page }) => {
-  // 17 telas com axe: o orçamento padrão de 30 s não basta com a suíte em paralelo.
-  test.setTimeout(120_000);
-  for (const rota of [
-    "/movimentacoes",
-    `/movimentacoes/nova?bem=${A.bemEstacao2}`,
-    "/ocorrencias",
-    `/ocorrencias/nova?bem=${A.bemEstacao2}`,
-    `/ocorrencias/${A.ocorrenciaBem2}`,
-    `/bens/${A.bemEstacao1}`,
-    `/bens/lotes/${A.loteAndaime}`,
-    `/etiquetas/bem/${A.bemEstacao1}`,
-    "/devolucoes",
-    `/devolucoes/${A.devolucao}`,
-    `/devolucoes/nova?locacao=${A.locacaoAtiva}`,
-    "/cobrancas",
-    "/cobrancas/nova",
-    `/cobrancas/${A.cobranca}`,
-    `/locacoes/${A.locacaoAtiva}?aba=cobrancas`,
-    "/dashboard",
-    "/relatorios",
-  ]) {
-    await page.goto(rota);
-    await expect(page.getByRole("main")).toBeVisible();
-    const resultado = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    const graves = resultado.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
-    expect(
-      graves.map((v) => `${rota}: ${v.id} (${v.nodes.length})`),
-      "violações sérias/críticas",
-    ).toEqual([]);
-  }
-});
 
 test("tema escolhido é aplicado e persiste após recarregar", async ({ page }) => {
   await page.goto("/dashboard");

@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Matriz completa de navegadores toda madrugada (UTC).
+    - cron: "17 5 * * *"
 
 permissions:
   contents: read
@@ -111,6 +115,57 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+      - name: Parar Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+
+  navegadores:
+    name: E2E em Chromium, Firefox e WebKit (375/768/1280)
+    # Matriz completa (F9.1): em push na main, manual ou agendada.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      E2E_FULL: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Subir Supabase local
+        run: npx supabase start -x realtime,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
+
+      - name: Exportar chaves do Supabase local
+        run: |
+          eval "$(npx supabase status -o env)"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Instalar navegadores do Playwright
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: E2E (3 navegadores × 3 tamanhos)
+        run: npm run e2e
+
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-navegadores
           path: playwright-report
           retention-days: 7
 

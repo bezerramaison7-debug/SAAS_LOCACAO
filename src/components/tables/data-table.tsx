@@ -30,7 +30,13 @@ export function DataTable<T>({ legenda, colunas, linhas, chaveLinha, vazio }: Da
 
   return (
     <>
-      <div className="hidden overflow-x-auto rounded-md border border-borda bg-superficie md:block">
+      {/* Região rolável focável: a tabela pode ser mais larga que a tela (WCAG 2.1.1). */}
+      <div
+        role="region"
+        aria-label={legenda}
+        tabIndex={0}
+        className="hidden overflow-x-auto rounded-md border border-borda bg-superficie md:block"
+      >
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">{legenda}</caption>
           <thead className="bg-superficie-2 text-sm text-texto-suave">

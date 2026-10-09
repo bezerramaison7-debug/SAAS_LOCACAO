@@ -19,26 +19,37 @@ const viewports = {
   desktop: { width: 1280, height: 800 },
 } as const;
 
-const chromium = Object.entries(viewports).map(([nome, viewport]) => ({
-  name: `chromium-${nome}`,
-  dependencies: ["setup"],
-  use: {
-    ...devices["Desktop Chrome"],
-    viewport,
-    ...(nome === "celular" ? { isMobile: true, hasTouch: true } : {}),
-    ...(launchOptions ? { launchOptions } : {}),
-  },
-}));
+/**
+ * Matriz de projetos: Chromium sempre (3 tamanhos); com E2E_FULL=1, Firefox e
+ * WebKit nos mesmos 3 tamanhos (F9.1). Firefox não suporta `isMobile`: no
+ * celular ele usa só a largura e o toque.
+ */
+const motores = {
+  chromium: devices["Desktop Chrome"],
+  firefox: devices["Desktop Firefox"],
+  webkit: devices["Desktop Safari"],
+} as const;
 
-const outrosNavegadores = COMPLETA
-  ? [
-      {
-        name: "firefox-desktop",
-        use: { ...devices["Desktop Firefox"], viewport: viewports.desktop },
-      },
-      { name: "webkit-celular", use: { ...devices["iPhone 13"], viewport: viewports.celular } },
-    ]
-  : [];
+function projetos(motor: keyof typeof motores) {
+  return Object.entries(viewports).map(([nome, viewport]) => ({
+    name: `${motor}-${nome}`,
+    dependencies: ["setup"],
+    use: {
+      ...motores[motor],
+      viewport,
+      ...(nome === "celular"
+        ? motor === "firefox"
+          ? { hasTouch: true }
+          : { isMobile: true, hasTouch: true }
+        : {}),
+      ...(motor === "chromium" && launchOptions ? { launchOptions } : {}),
+    },
+  }));
+}
+
+const navegadores = COMPLETA
+  ? [...projetos("chromium"), ...projetos("firefox"), ...projetos("webkit")]
+  : projetos("chromium");
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -59,8 +70,7 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts/,
       use: { ...devices["Desktop Chrome"], ...(launchOptions ? { launchOptions } : {}) },
     },
-    ...chromium,
-    ...outrosNavegadores,
+    ...navegadores,
   ],
   ...(process.env.E2E_BASE_URL
     ? {}
