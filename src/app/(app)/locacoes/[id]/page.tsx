@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { EstimativaLocacao } from "@/features/cobrancas/components/estimativa";
 import { PainelEncerramentos } from "@/features/encerramentos/painel";
+import { BotaoRelatorio } from "@/features/relatorios/components/botao-relatorio";
 import { cancelarLocacao } from "@/features/locacoes/actions";
 import { AbasLocacao, abasVisiveis, ROTULO_ABA } from "@/features/locacoes/components/abas";
 import { ConteudoAba } from "@/features/locacoes/components/conteudo-aba";
@@ -99,6 +100,9 @@ export default async function LocacaoPage({ params, searchParams }: PageProps<"/
                 <Undo2 aria-hidden /> Solicitar devolução
               </Link>
             </Button>
+          ) : null}
+          {locacao.status !== "RASCUNHO" && pode(contexto, "relatorio.gerar") ? (
+            <BotaoRelatorio tipo="LOCACAO" alvo={locacao.id} />
           ) : null}
           {podeCobrar ? (
             <Button asChild variante="secundaria">

@@ -16,7 +16,8 @@ export function destinoSeguro(destino: string | null | undefined, padrao = "/das
 }
 
 /** Rotas acessíveis sem sessão. */
-const PUBLICAS = ["/login", "/recuperar-senha", "/auth/", "/api/health"];
+// O worker de relatórios não tem sessão: é protegido pelo segredo (D-16).
+const PUBLICAS = ["/login", "/recuperar-senha", "/auth/", "/api/health", "/api/reports/process"];
 
 export function rotaPublica(pathname: string): boolean {
   return PUBLICAS.some((p) =>

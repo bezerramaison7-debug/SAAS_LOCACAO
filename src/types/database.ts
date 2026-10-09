@@ -2342,6 +2342,7 @@ export type Database = {
       buscar_locacoes: {
         Args: {
           p_centro_custo?: string;
+          p_com_saldo?: boolean;
           p_empresa: string;
           p_fornecedor?: string;
           p_limite?: number;
@@ -2351,7 +2352,9 @@ export type Database = {
           p_periodo_inicio?: string;
           p_q?: string;
           p_status?: Database["public"]["Enums"]["status_locacao"][];
+          p_status_financeiro?: Database["public"]["Enums"]["status_financeiro"][];
           p_termino_ate?: string;
+          p_termino_de?: string;
         };
         Returns: {
           centro_custo: string;
@@ -2418,6 +2421,49 @@ export type Database = {
         };
         Returns: undefined;
       };
+      relatorio_concluir: {
+        Args: {
+          p_assinatura: string;
+          p_hash_arquivo: string;
+          p_hash_dados: string;
+          p_relatorio: string;
+          p_storage_path: string;
+        };
+        Returns: undefined;
+      };
+      relatorio_falhar: { Args: { p_erro: string; p_relatorio: string }; Returns: undefined };
+      relatorio_reivindicar: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          assinatura_hmac: string | null;
+          codigo: string;
+          concluido_em: string | null;
+          created_at: string;
+          created_by: string | null;
+          empresa_id: string;
+          erro: string | null;
+          hash_arquivo: string | null;
+          hash_dados: string | null;
+          id: string;
+          iniciado_em: string | null;
+          parametros: NonNullable<Json>;
+          solicitado_por: string;
+          status: Database["public"]["Enums"]["status_relatorio"];
+          storage_path: string | null;
+          tentativas: number;
+          tipo: Database["public"]["Enums"]["tipo_relatorio"];
+          updated_at: string;
+          updated_by: string | null;
+          versao_template: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "relatorios";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      relatorio_snapshot: { Args: { p_limite_fotos?: number; p_relatorio: string }; Returns: Json };
       rpc_aceitar_movimentacao: {
         Args: { p_justificativa?: string; p_movimentacao: string };
         Returns: undefined;
@@ -2634,6 +2680,16 @@ export type Database = {
       };
       rpc_solicitar_devolucao: {
         Args: { p_itens: Json; p_locacao: string; p_observacoes?: string };
+        Returns: string;
+      };
+      rpc_solicitar_relatorio: {
+        Args: {
+          p_alvo?: string;
+          p_fim?: string;
+          p_inicio?: string;
+          p_tipo: Database["public"]["Enums"]["tipo_relatorio"];
+          p_versao_template?: string;
+        };
         Returns: string;
       };
       rpc_substituir_evidencia: {

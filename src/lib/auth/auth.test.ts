@@ -61,6 +61,9 @@ describe("rotaPublica", () => {
     ["/dashboard", false],
     ["/loginx", false],
     ["/api/files", false],
+    ["/api/reports/process", true],
+    ["/api/reports", false],
+    ["/api/reports/x/download", false],
   ])("%s → %s", (rota, esperado) => {
     expect(rotaPublica(rota)).toBe(esperado);
   });

@@ -11,6 +11,8 @@ import { type Contexto } from "@/lib/auth/contexto";
 import { qrDataUri } from "@/lib/qr/qr";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import { BotaoRelatorio } from "@/features/relatorios/components/botao-relatorio";
+
 import { iniciarVistoriaPeriodica } from "./actions";
 
 const MOVIMENTAVEIS_BEM = ["DISPONIVEL", "EM_USO"];
@@ -138,6 +140,9 @@ export async function CabecalhoFicha({
             variante="secundaria"
             pendente="Abrindo…"
           />
+        ) : null}
+        {alvo.tipo === "bem" && pode(contexto, "relatorio.gerar") ? (
+          <BotaoRelatorio tipo="BEM" alvo={alvo.id} />
         ) : null}
         <Button asChild variante="secundaria">
           <Link href={etiqueta} target="_blank">
