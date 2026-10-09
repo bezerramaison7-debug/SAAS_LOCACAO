@@ -111,10 +111,12 @@ Sem variáveis novas: o worker usa `REPORT_SIGNING_SECRET` (já obrigatória). P
 
 ## Testes atualmente passando
 
-- Unit: 270 (33 arquivos).
+- Unit: 272 (34 arquivos).
 - Integração: 150 (10 arquivos).
-- RLS: 235 (4 arquivos).
-- E2E (Chromium 375/768/1280, Auth e Storage reais): 299 passando, 15 pulados por aplicabilidade.
+- RLS: 237 (4 arquivos).
+- E2E (Chromium 375/768/1280, Auth e Storage reais): 302 passando, 18 pulados por aplicabilidade (teclado físico no celular; testes de servidor só no desktop) — duas execuções seguidas no mesmo banco (limpo e com dados acumulados), ambas verdes.
+- Backup/restauração: simulado verde (59 tabelas idênticas; arquivos conferidos por SHA-256).
+- Firefox/WebKit: configurados no CI (job `navegadores`), não executáveis neste ambiente.
 
 ## Testes atualmente falhando
 
