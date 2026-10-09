@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-BR">
+  <body style="font-family: Arial, sans-serif; color: #14181f; line-height: 1.5">
+    <h2>Redefinição de senha — Rastreio de Locações</h2>
+    <p>Recebemos um pedido para redefinir a senha desta conta.</p>
+    <p>
+      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery"
+        >Definir nova senha</a
+      >
+    </p>
+    <p style="color: #4a5361">
+      Se você não fez este pedido, ignore este e-mail: sua senha continua a mesma.
+    </p>
+  </body>
+</html>

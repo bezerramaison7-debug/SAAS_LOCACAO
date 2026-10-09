@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — identidade "operação industrial": base neutra (cinza-ardósia),
+ * UMA cor principal (azul-aço) e cores semânticas usadas somente para estados.
+ * Contrastes verificados para WCAG AA (texto normal ≥ 4.5:1) nos dois temas.
+ *
+ * Tema: `data-theme="claro" | "escuro"` no <html>; sem atributo = segue o sistema.
+ */
+:root {
+  color-scheme: light;
+  --fundo: #f6f7f9;
+  --superficie: #ffffff;
+  --superficie-2: #eef0f3;
+  --borda: #d5d9e0;
+  --borda-forte: #9aa3b0;
+  --texto: #14181f;
+  --texto-suave: #4a5361;
+  --primaria: #1d4f91;
+  --primaria-hover: #163d71;
+  --primaria-contraste: #ffffff;
+  --primaria-suave: #e3ecf8;
+  --foco: #1d4f91;
+  --sucesso: #146c3a;
+  --sucesso-suave: #e2f3e8;
+  --alerta: #8a4b00;
+  --alerta-suave: #fbf0dc;
+  --perigo: #b42318;
+  --perigo-contraste: #ffffff;
+  --perigo-suave: #fbe7e5;
+  --info: #1d4f91;
+  --info-suave: #e3ecf8;
+  --neutro-suave: #eef0f3;
+  --sombra: 0 1px 2px rgb(16 24 40 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="claro"]) {
+    color-scheme: dark;
+    --fundo: #0f1217;
+    --superficie: #161b22;
+    --superficie-2: #1e252e;
+    --borda: #2c3540;
+    --borda-forte: #4b5767;
+    --texto: #e7eaee;
+    --texto-suave: #a5afbd;
+    --primaria: #6ea4e8;
+    --primaria-hover: #8db8ee;
+    --primaria-contraste: #0b1220;
+    --primaria-suave: #17273d;
+    --foco: #8db8ee;
+    --sucesso: #5cc489;
+    --sucesso-suave: #12291c;
+    --alerta: #e6a94d;
+    --alerta-suave: #2e2210;
+    --perigo: #f2867c;
+    --perigo-contraste: #0f1217;
+    --perigo-suave: #34161a;
+    --info: #6ea4e8;
+    --info-suave: #17273d;
+    --neutro-suave: #1e252e;
+    --sombra: 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+}
+
+:root[data-theme="escuro"] {
+  color-scheme: dark;
+  --fundo: #0f1217;
+  --superficie: #161b22;
+  --superficie-2: #1e252e;
+  --borda: #2c3540;
+  --borda-forte: #4b5767;
+  --texto: #e7eaee;
+  --texto-suave: #a5afbd;
+  --primaria: #6ea4e8;
+  --primaria-hover: #8db8ee;
+  --primaria-contraste: #0b1220;
+  --primaria-suave: #17273d;
+  --foco: #8db8ee;
+  --sucesso: #5cc489;
+  --sucesso-suave: #12291c;
+  --alerta: #e6a94d;
+  --alerta-suave: #2e2210;
+  --perigo: #f2867c;
+  --perigo-contraste: #0f1217;
+  --perigo-suave: #34161a;
+  --info: #6ea4e8;
+  --info-suave: #17273d;
+  --neutro-suave: #1e252e;
+  --sombra: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borda: var(--borda);
+  --color-borda-forte: var(--borda-forte);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-primaria: var(--primaria);
+  --color-primaria-hover: var(--primaria-hover);
+  --color-primaria-contraste: var(--primaria-contraste);
+  --color-primaria-suave: var(--primaria-suave);
+  --color-foco: var(--foco);
+  --color-sucesso: var(--sucesso);
+  --color-sucesso-suave: var(--sucesso-suave);
+  --color-alerta: var(--alerta);
+  --color-alerta-suave: var(--alerta-suave);
+  --color-perigo: var(--perigo);
+  --color-perigo-contraste: var(--perigo-contraste);
+  --color-perigo-suave: var(--perigo-suave);
+  --color-info: var(--info);
+  --color-info-suave: var(--info-suave);
+  --color-neutro-suave: var(--neutro-suave);
+  --shadow-sutil: var(--sombra);
+  --font-sans:
+    "Inter", "Segoe UI", system-ui, -apple-system, "Roboto", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+}
+
+@layer base {
+  html {
+    /* Texto principal ≥ 16px. */
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--fundo);
+    color: var(--texto);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  /* Foco sempre visível em navegação por teclado. */
+  :focus-visible {
+    outline: 3px solid var(--foco);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

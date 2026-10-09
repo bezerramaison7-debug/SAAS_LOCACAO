@@ -1,0 +1,231 @@
+# Permissões — matriz de autorização
+
+> Fonte de verdade em código: `src/lib/permissions/matriz.ts`. Espelho no banco: `privado.papel_permissoes` (migration `20261008120100`). `tests/integration/paridade.test.ts` falha se as duas divergirem. Permissões auxiliares de leitura: `dados.ler_geral` (todos exceto RESPONSAVEL_LOCAL) e `valores.ver` (idem, S-08).
+> A mesma permissão é verificada em **três lugares**: UI (`can()`), servidor (`exigirPermissao()`), banco (`usuario_tem_permissao()` em policies e `rpc_*`). Storage tem policy própria.
+
+## 1. Papéis
+
+| Papel               | Escopo                                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `ADMIN`             | Configurações, usuários e todas as operações da empresa.                                                   |
+| `COMPRAS`           | Locações, referências Sectra, fornecedores, contratos, itens contratados; autoriza excesso de recebimento. |
+| `OPERACAO`          | Recebimentos, bens, lotes, vistorias, movimentações, ocorrências, devoluções, encerramento operacional.    |
+| `RESPONSAVEL_LOCAL` | Consulta e aceite dos itens **sob sua responsabilidade**; registra ocorrência sobre eles [S-05].           |
+| `FINANCEIRO`        | Cobranças, divergências, ciência de devoluções, encerramento financeiro.                                   |
+| `GESTOR`            | Consulta geral, dashboards, indicadores, relatórios, auditoria (leitura).                                  |
+| `AUDITOR`           | Leitura geral e histórico; gera relatórios; **nenhuma mutação operacional**.                               |
+
+Um usuário tem **um papel por empresa** (`usuarios_empresa.papel`) e pode pertencer a várias empresas [S-07]. Usuário com associação `ativo = false` não tem nenhuma permissão naquela empresa.
+
+## 2. Escopo de leitura
+
+| Papel                                                 | Leitura                                                                                                                                                                                                                           |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADMIN, COMPRAS, OPERACAO, FINANCEIRO, GESTOR, AUDITOR | Todos os dados operacionais da empresa.                                                                                                                                                                                           |
+| RESPONSAVEL_LOCAL                                     | Bens/lotes onde é responsável atual **ou** destinatário de movimentação pendente; seus eventos (movimentações, vistorias, ocorrências, evidências desses itens); cabeçalho resumido da locação desses itens (sem valores [S-08]). |
+| Auditoria (`auditoria`)                               | ADMIN, GESTOR, AUDITOR.                                                                                                                                                                                                           |
+| Usuários da empresa                                   | Todos veem nome dos membros (necessário para escolher responsável); só ADMIN vê/edita papel, status e e-mail.                                                                                                                     |
+
+## 3. Matriz de permissões (ações)
+
+Legenda: ✅ permitido · 🔸 permitido com escopo restrito (ver nota) · — negado
+
+| Permissão                                                                | ADMIN | COMPRAS | OPERACAO | RESP_LOCAL | FINANCEIRO | GESTOR | AUDITOR |
+| ------------------------------------------------------------------------ | :---: | :-----: | :------: | :--------: | :--------: | :----: | :-----: |
+| **Empresa / usuários**                                                   |       |         |          |            |            |        |         |
+| `empresa.configurar`                                                     |  ✅   |    —    |    —     |     —      |     —      |   —    |    —    |
+| `usuarios.gerenciar` (convidar, papel, ativar/desativar)                 |  ✅   |    —    |    —     |     —      |     —      |   —    |    —    |
+| `auditoria.ler`                                                          |  ✅   |    —    |    —     |     —      |     —      |   ✅   |   ✅    |
+| **Cadastros**                                                            |       |         |          |            |            |        |         |
+| `fornecedor.gerenciar`                                                   |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `local.gerenciar`                                                        |  ✅   |   ✅    |    ✅    |     —      |     —      |   —    |    —    |
+| `centro_custo.gerenciar`                                                 |  ✅   |   ✅    |    —     |     —      |     ✅     |   —    |    —    |
+| `categoria.gerenciar`                                                    |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `checklist.gerenciar` (criar versão, publicar)                           |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| **Locação**                                                              |       |         |          |            |            |        |         |
+| `locacao.criar` / `locacao.editar` (rascunho; aditivo com motivo)        |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `locacao.referencia.gerenciar`                                           |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `locacao.ativar`                                                         |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `locacao.cancelar`                                                       |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `locacao.iniciar_desmobilizacao`                                         |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `locacao.encerrar_operacional`                                           |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `locacao.encerrar_financeiro`                                            |  ✅   |    —    |    —     |     —      |     ✅     |   —    |    —    |
+| **Recebimento**                                                          |       |         |          |            |            |        |         |
+| `recebimento.registrar` (rascunho, editar, confirmar sem excesso)        |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `recebimento.autorizar_excesso`                                          |  ✅   |   ✅    |    —     |     —      |     —      |   —    |    —    |
+| `recebimento.cancelar_confirmado`                                        |  ✅   |    —    |    —     |     —      |     —      |   —    |    —    |
+| **Vistoria**                                                             |       |         |          |            |            |        |         |
+| `vistoria.registrar`                                                     |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| **Movimentação**                                                         |       |         |          |            |            |        |         |
+| `movimentacao.registrar`                                                 |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `movimentacao.aceitar` (próprio destinatário)                            |  🔸¹  |   🔸²   |   🔸²    |    🔸²     |    🔸²     |  🔸²   |    —    |
+| **Ocorrência**                                                           |       |         |          |            |            |        |         |
+| `ocorrencia.registrar`                                                   |  ✅   |   ✅    |    ✅    |    🔸³     |    ✅⁴     |   —    |    —    |
+| `ocorrencia.tratar` (em tratamento, resolver, reabrir, cancelar)         |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `troca.registrar`                                                        |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| **Devolução**                                                            |       |         |          |            |            |        |         |
+| `devolucao.gerenciar` (solicitar, agendar, retirada, conferir, cancelar) |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| `devolucao.ciencia_financeira`                                           |  ✅   |    —    |    —     |     —      |     ✅     |   —    |    —    |
+| **Cobrança**                                                             |       |         |          |            |            |        |         |
+| `cobranca.gerenciar` (registrar, conferir, divergente, resolver)         |  ✅   |    —    |    —     |     —      |     ✅     |   —    |    —    |
+| `cobranca.ver_estimativa`                                                |  ✅   |   ✅    |    —     |     —      |     ✅     |   ✅   |   ✅    |
+| **Evidências**                                                           |       |         |          |            |            |        |         |
+| `evidencia.enviar` (sobre entidade que o papel pode mutar)               |  ✅   |   ✅⁵   |    ✅    |    🔸³     |    ✅⁵     |   —    |    —    |
+| `evidencia.substituir_remover` (com motivo)                              |  ✅   |    —    |    ✅    |     —      |     —      |   —    |    —    |
+| **Relatórios**                                                           |       |         |          |            |            |        |         |
+| `relatorio.gerar`                                                        |  ✅   |   ✅    |    ✅    |     —      |     ✅     |   ✅   |   ✅    |
+
+Notas:
+
+1. ADMIN pode registrar **aceite administrativo** em nome do destinatário, com justificativa obrigatória e auditoria explícita.
+2. Qualquer usuário ativo pode aceitar/recusar **somente** movimentações em que é `novo_responsavel_id`. AUDITOR não pode ser responsável por itens.
+3. Somente sobre bens/lotes sob sua responsabilidade atual.
+4. FINANCEIRO registra ocorrências do tipo `DIVERGENCIA_DOCUMENTAL`.
+5. COMPRAS: contratos/documentos de locação e referências; FINANCEIRO: documentos de cobrança.
+
+## 4. Matriz por tabela (banco — RLS + grants)
+
+`S` = select, `I` = insert, `U` = update (só colunas concedidas), `RPC` = só via função de domínio. Nenhuma tabela concede `DELETE` a `authenticated`; `anon` não tem grant em nenhuma tabela.
+
+| Tabela                                              | S                                                                                          | I / U direto                                                      | Mutação via RPC                                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| empresas                                            | membros                                                                                    | U: `empresa.configurar` (colunas de configuração)                 | —                                                                                         |
+| perfis_usuario                                      | membros da mesma empresa (nome)                                                            | U: próprio usuário (nome, telefone)                               | —                                                                                         |
+| usuarios_empresa                                    | todos os membros ativos da empresa (papel e status visíveis; e-mail não está nesta tabela) | —                                                                 | funções administrativas (Fase 3)                                                          |
+| privado.papel_permissoes, privado.transicoes        | — (esquema não exposto)                                                                    | — (só migration)                                                  | —                                                                                         |
+| fornecedores, centros_custo, categorias_bem, locais | membros                                                                                    | I/U: permissão `*.gerenciar`                                      | —                                                                                         |
+| modelos_checklist, perguntas_checklist              | membros                                                                                    | I/U: `checklist.gerenciar` enquanto RASCUNHO                      | `rpc_publicar_checklist`, `rpc_nova_versao_checklist`                                     |
+| locacoes                                            | leitura geral / RL escopo                                                                  | I/U: `locacao.criar/editar` em RASCUNHO (colunas descritivas)     | ativar, cancelar, aditivo, desmobilizar, encerrar_operacional, encerrar_financeiro        |
+| referencias_externas                                | idem locações                                                                              | I/U: `locacao.referencia.gerenciar`                               | —                                                                                         |
+| itens_locacao                                       | idem                                                                                       | I/U: `locacao.editar` em RASCUNHO                                 | `rpc_aditivo_item`                                                                        |
+| recebimentos, itens_recebimento                     | leitura geral                                                                              | I/U: rascunho do autor com `recebimento.registrar`                | confirmar, enviar_autorizacao, autorizar_excesso, cancelar                                |
+| bens, lotes                                         | leitura geral / RL escopo                                                                  | U: colunas de identificação **somente em AGUARDANDO_RECEBIMENTO** | todas as mudanças de status/local/responsável/quantidade                                  |
+| vistorias, respostas_vistoria                       | leitura geral / RL escopo                                                                  | I/U: `vistoria.registrar` enquanto RASCUNHO                       | `rpc_concluir_vistoria`                                                                   |
+| movimentacoes                                       | leitura geral / RL escopo                                                                  | —                                                                 | registrar, aceitar, recusar, cancelar                                                     |
+| ocorrencias                                         | leitura geral / RL escopo                                                                  | —                                                                 | registrar, tratar, resolver, reabrir, cancelar, troca                                     |
+| devolucoes, itens_devolucao                         | leitura geral                                                                              | I/U: rascunho com `devolucao.gerenciar`                           | solicitar, agendar, confirmar_retirada, conferir, cancelar, ciencia_financeira            |
+| cobrancas                                           | leitura geral (sem RL)                                                                     | —                                                                 | registrar, conferir, marcar_divergente, resolver                                          |
+| evidencias                                          | conforme entidade                                                                          | —                                                                 | `rpc_registrar_evidencia`, `rpc_substituir_evidencia`, `rpc_remover_evidencia`            |
+| relatorios                                          | membros com `relatorio.gerar` (próprios) + ADMIN/GESTOR/AUDITOR todos                      | —                                                                 | `rpc_solicitar_relatorio`; worker usa service role apenas para atualizar status e storage |
+| auditoria                                           | `auditoria.ler`                                                                            | — (só triggers/funções)                                           | —                                                                                         |
+| auditoria_autenticacao, limites_taxa, sequencias    | — (sem grant)                                                                              | —                                                                 | funções internas                                                                          |
+
+## 5. Storage
+
+| Bucket                              | Leitura (`select` em `storage.objects`)                                                                                                     | Escrita                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| evidencias, contratos, comprovantes | `usuario_pertence_empresa(primeiro segmento do path)` **e** existe linha em `evidencias` com aquele `storage_path` visível ao usuário (RLS) | somente servidor (service role) após validação |
+| relatorios                          | membro com `relatorio.gerar` e linha visível em `relatorios`                                                                                | somente worker                                 |
+
+Buckets `public = false`. URLs assinadas: 5 minutos, geradas sob demanda, nunca persistidas.
+
+## 6. Casos de teste obrigatórios (RLS)
+
+Para cada tabela crítica (locacoes, itens_locacao, referencias_externas, recebimentos, bens, lotes, movimentacoes, ocorrencias, devolucoes, cobrancas, evidencias, auditoria, usuarios_empresa) e para storage:
+
+| Ator                               | SELECT        | INSERT                                         | UPDATE                                                 | Cancelamento (RPC) |
+| ---------------------------------- | ------------- | ---------------------------------------------- | ------------------------------------------------------ | ------------------ |
+| anônimo                            | negado        | negado                                         | negado                                                 | negado             |
+| papel autorizado da Empresa A em A | permitido     | conforme matriz                                | conforme matriz                                        | conforme matriz    |
+| papel da Empresa A em dados de B   | 0 linhas      | negado                                         | 0 linhas afetadas                                      | negado             |
+| usuário inativo de A               | 0 linhas      | negado                                         | negado                                                 | negado             |
+| AUDITOR de A                       | permitido     | negado                                         | negado                                                 | negado             |
+| RESPONSAVEL_LOCAL de A             | só seu escopo | negado (exceto ocorrência/evidência no escopo) | negado                                                 | negado             |
+| qualquer authenticated             | —             | —                                              | `status`/`empresa_id`/`local_atual_id` diretos: negado | —                  |
+
+## 7. Implementação no banco (Fase 2)
+
+- Funções: `privado.usuario_pertence_empresa`, `privado.usuario_tem_permissao`, `privado.pode_ler` (= `dados.ler_geral`), `privado.ve_bem`, `privado.ve_lote`, `privado.ve_locacao_por_item`, `privado.ve_entidade` (escopo RESPONSAVEL_LOCAL). Todas `security definer` com `search_path` fixo (testado).
+- Grants por coluna: ver `supabase/migrations/20261008120800_rls_privilegios.sql`. Colunas de estado, local/responsável atuais, quantidades derivadas, `empresa_id` (UPDATE), `codigo` e autoria nunca são graváveis por `authenticated` (testado em `tests/rls/estrutura.test.ts`).
+- Evidências: RESPONSAVEL_LOCAL vê evidências de BEM/LOTE sob sua responsabilidade, das vistorias desses itens, das movimentações em que é origem/destino e das ocorrências que registrou ou que tratam de seus itens.
+- Provas automatizadas: `tests/rls/isolamento-empresas.test.ts` (gate A×B), `tests/rls/atores.test.ts` (anônimo, inativo, sem empresa, AUDITOR, RESPONSAVEL_LOCAL, matriz de escrita, operações de estado), `tests/rls/storage.test.ts`.
+
+## 8. Interface e servidor (Fase 3)
+
+| Recurso                   | Regra                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Menu                      | `navegacaoPara(permissoes)`: Recebimentos/Devoluções exigem `dados.ler_geral`; Cobranças `valores.ver`; Relatórios `relatorio.gerar` |
+| `/configuracoes`          | Qualquer membro (próprio perfil); seção Empresa com `empresa.configurar`; link de usuários com `usuarios.gerenciar`                  |
+| `/configuracoes/usuarios` | `usuarios.gerenciar` (senão "não encontrada" — D-37)                                                                                 |
+| Actions de usuários       | `usuarios.gerenciar` no servidor + `rpc_*` revalidam no banco; ADMIN não desativa a si mesmo; último ADMIN protegido                 |
+| Empresa ativa             | Sempre derivada das associações ativas lidas do banco; cookie forjado é ignorado (testado em E2E)                                    |
+
+Provas automatizadas: `tests/e2e/perfis.spec.ts` (8 perfis × 3 viewports), `tests/e2e/isolamento.spec.ts`, `tests/integration/usuarios-admin.test.ts`.
+
+## 9. Cadastros e locações (Fase 4)
+
+| Recurso                                 | Interface/servidor                                                                                                        | Banco                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `/cadastros/**` (consulta)              | `dados.ler_geral` (RESPONSAVEL_LOCAL recebe "não encontrada")                                                             | SELECT por `usuario_pertence_empresa`                                                         |
+| Fornecedor / local / centro / categoria | botões e formulários só com `fornecedor.gerenciar` / `local.gerenciar` / `centro_custo.gerenciar` / `categoria.gerenciar` | INSERT/UPDATE por policy com a mesma permissão; código/modo só na criação (grants por coluna) |
+| Checklists                              | `checklist.gerenciar` (ADMIN, OPERACAO)                                                                                   | perguntas só em rascunho (trigger); `rpc_publicar_checklist`, `rpc_nova_versao_checklist`     |
+| Nova locação / etapas                   | `locacao.criar` / `locacao.editar`; edição só em RASCUNHO                                                                 | policies exigem RASCUNHO + permissão                                                          |
+| Referências Sectra                      | `locacao.referencia.gerenciar`; remover só em RASCUNHO                                                                    | idem (D-41)                                                                                   |
+| Ativar / cancelar                       | `locacao.ativar` / `locacao.cancelar`, com confirmação (e motivo)                                                         | `rpc_ativar_locacao` / `rpc_cancelar_locacao` revalidam tudo                                  |
+| Abas do detalhe                         | D-45 (`valores.ver`, `dados.ler_geral`, `auditoria.ler`)                                                                  | RLS das tabelas de cada aba                                                                   |
+
+Provas: `tests/e2e/{cadastros,locacoes}.spec.ts` (3 viewports), `tests/integration/locacoes.test.ts`.
+
+## 10. Recebimento, vistoria e evidências (Fase 5)
+
+| Recurso                        | Interface/servidor                                                           | Banco                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/recebimentos` (consulta)     | `dados.ler_geral`                                                            | RLS `pode_ler`                                                                          |
+| Novo recebimento / etapas      | `recebimento.registrar` (ADMIN, OPERACAO); edição só em RASCUNHO             | policies + `rpc_*` exigem rascunho e locação ATIVA                                      |
+| Vistoria de entrada            | `vistoria.registrar`                                                         | `rpc_iniciar_vistoria_entrada`, `rpc_salvar_respostas_vistoria`; INSERT direto revogado |
+| Autorizar excesso              | `recebimento.autorizar_excesso` (ADMIN, COMPRAS), com justificativa          | `rpc_autorizar_excesso`                                                                 |
+| Descartar rascunho             | autor do rascunho ou ADMIN, com motivo                                       | `rpc_descartar_recebimento`                                                             |
+| Cancelar confirmado            | `recebimento.cancelar_confirmado` (ADMIN), sem eventos posteriores           | `rpc_cancelar_recebimento_confirmado`                                                   |
+| Enviar evidência               | `evidencia.enviar` + acesso à entidade                                       | `rpc_preparar_evidencia` / `rpc_registrar_evidencia`; INSERT direto negado              |
+| Substituir / remover evidência | `evidencia.substituir_remover` (ADMIN, OPERACAO), remoção com motivo         | `rpc_substituir_evidencia` / `rpc_remover_evidencia`                                    |
+| Ler arquivo                    | quem lê a evidência pela RLS                                                 | policy de `storage.objects` + URL assinada de 5 min                                     |
+| `/bens`, `/vistorias`          | qualquer membro; RESPONSAVEL_LOCAL vê só o que está sob sua responsabilidade | RLS `pode_ler` ou `ve_bem`/`ve_lote`                                                    |
+
+Provas: `tests/integration/recebimentos.test.ts`, `tests/e2e/recebimentos.spec.ts` (inclui origem externa, outra empresa, conteúdo inválido e acesso anônimo).
+
+## 11. Movimentações, ocorrências, troca e QR (Fase 6)
+
+| Recurso                                | Interface/servidor                                           | Banco                                                                            |
+| -------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Registrar movimentação                 | `movimentacao.registrar` (ADMIN, OPERACAO)                   | `rpc_registrar_movimentacao` (INSERT/UPDATE diretos revogados)                   |
+| Aceitar / recusar                      | destinatário da movimentação                                 | `rpc_aceitar_movimentacao` / `rpc_recusar_movimentacao`                          |
+| Aceite administrativo                  | ADMIN, com justificativa                                     | `rpc_aceitar_movimentacao(p_justificativa)`                                      |
+| Cancelar pendente                      | autor ou ADMIN, com motivo                                   | `rpc_cancelar_movimentacao`                                                      |
+| Registrar ocorrência                   | `ocorrencia.registrar`; FINANCEIRO só divergência documental | `rpc_registrar_ocorrencia`                                                       |
+| Tratar / resolver / reabrir / cancelar | `ocorrencia.tratar` (ADMIN, OPERACAO)                        | `rpc_tratar/resolver/reabrir/cancelar_ocorrencia`                                |
+| Troca                                  | `troca.registrar` (ADMIN, OPERACAO)                          | `rpc_trocar_bem`                                                                 |
+| Vistoria periódica                     | `vistoria.registrar`                                         | `rpc_iniciar_vistoria`, `rpc_salvar_respostas_vistoria`, `rpc_concluir_vistoria` |
+| Linha do tempo                         | quem lê o bem/lote                                           | `linha_do_tempo` (security invoker: cada fonte filtrada pela RLS)                |
+| `/q/{id}` e etiqueta                   | sessão + empresa ativa; fora do escopo = 404                 | RLS de `bens`/`lotes`                                                            |
+| Responsável por bem                    | membros ativos exceto AUDITOR                                | `privado.validar_responsavel`                                                    |
+
+Provas: `tests/integration/movimentacoes.test.ts`, `tests/e2e/movimentacoes.spec.ts`.
+
+## 12. Devoluções, cobranças e encerramentos (Fase 7)
+
+| Recurso                                         | Interface/servidor                                                                  | Banco                                                                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/devolucoes` (consulta)                        | `dados.ler_geral`                                                                   | RLS `pode_ler`                                                                                                                                            |
+| Solicitar, agendar, retirar, conferir, cancelar | `devolucao.gerenciar` (ADMIN, OPERACAO)                                             | `rpc_solicitar_devolucao`, `rpc_agendar_devolucao`, `rpc_confirmar_retirada`, `rpc_conferir_devolucao`, `rpc_cancelar_devolucao`; escrita direta revogada |
+| Vistoria de saída                               | `vistoria.registrar`                                                                | `rpc_iniciar_vistoria_saida` + funções de vistoria                                                                                                        |
+| Comprovante                                     | `evidencia.enviar`; só após a retirada                                              | `validar_anexo`                                                                                                                                           |
+| Ciência financeira                              | `devolucao.ciencia_financeira` (ADMIN, FINANCEIRO)                                  | `rpc_dar_ciencia_devolucao`                                                                                                                               |
+| Iniciar desmobilização / encerrar operação      | `locacao.iniciar_desmobilizacao` / `locacao.encerrar_operacional` (ADMIN, OPERACAO) | `rpc_iniciar_desmobilizacao` / `rpc_encerrar_operacional`                                                                                                 |
+| Encerramento financeiro                         | `locacao.encerrar_financeiro` (ADMIN, FINANCEIRO), com data                         | `rpc_encerrar_financeiro`                                                                                                                                 |
+| `/cobrancas` (consulta)                         | `valores.ver`                                                                       | RLS `valores.ver`                                                                                                                                         |
+| Registrar, conferir, divergir, resolver         | `cobranca.gerenciar` (ADMIN, FINANCEIRO)                                            | `rpc_registrar_cobranca`, `rpc_conferir_cobranca`, `rpc_marcar_cobranca_divergente`, `rpc_resolver_cobranca`                                              |
+| Estimativa                                      | `cobranca.ver_estimativa` (ADMIN, COMPRAS, FINANCEIRO, GESTOR, AUDITOR)             | `estimativa_locacao`                                                                                                                                      |
+
+Provas: `tests/integration/devolucoes.test.ts`, `tests/e2e/devolucoes.spec.ts`.
+
+## 13. Painel e relatórios (Fase 8)
+
+| Recurso                   | Interface/servidor                                                 | Banco                                                               |
+| ------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `/dashboard`              | qualquer membro; grupos conforme `dados.ler_geral` e `valores.ver` | mesmas consultas (e RLS) das listas                                 |
+| Pedir relatório           | `relatorio.gerar` (todos exceto RESPONSAVEL_LOCAL)                 | `rpc_solicitar_relatorio` (alvo da empresa ativa + limite de taxa)  |
+| Ver/baixar relatório      | quem pediu (ou quem tem `auditoria.ler`)                           | RLS `relatorios` + policy do bucket `relatorios` (só CONCLUIDO)     |
+| Fila, snapshot, conclusão | worker com `REPORT_SIGNING_SECRET`                                 | `relatorio_reivindicar/snapshot/concluir/falhar`: só `service_role` |
+| Valores no PDF            | incluídos só se quem pediu tem `valores.ver`                       | decidido em `rpc_solicitar_relatorio`                               |
+
+Provas: `tests/integration/relatorios.test.ts`, `tests/e2e/relatorios.spec.ts`, `tests/e2e/painel.spec.ts`.
