@@ -90,7 +90,7 @@ async function enriquecer(contexto: Contexto, linhas: Linha[]) {
 
 export async function listarMovimentacoes(
   contexto: Contexto,
-  filtros: { status: StatusMovimentacao | null; paginacao: Paginacao },
+  filtros: { status: StatusMovimentacao | null; paraMim?: boolean; paginacao: Paginacao },
 ) {
   const supabase = await createSupabaseServerClient();
   const { de, ate } = intervaloPaginacao(filtros.paginacao);
@@ -101,6 +101,8 @@ export async function listarMovimentacoes(
     .order("data_evento", { ascending: false })
     .range(de, ate);
   if (filtros.status) consulta = consulta.eq("status", filtros.status);
+  // "Para mim": destinadas ao usuário (pendências de aceite do responsável local — §5.2).
+  if (filtros.paraMim) consulta = consulta.eq("novo_responsavel_id", contexto.usuario.id);
   const { data, count, error } = await consulta;
   if (error) throw new Error("Falha ao listar movimentações");
   return { linhas: await enriquecer(contexto, data ?? []), total: count ?? 0 };

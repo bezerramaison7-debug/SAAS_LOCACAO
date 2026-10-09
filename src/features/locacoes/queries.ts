@@ -23,6 +23,18 @@ export type LinhaLocacao = {
   terminoPrevisto: string | null;
 };
 
+/**
+ * §5.2: "términos em N dias" = entre hoje e hoje+N (cumulativo); "vencido" =
+ * término antes de hoje com saldo ainda sob responsabilidade.
+ */
+function termino(filtros: FiltrosLocacao, hoje: string) {
+  if (filtros.termino === "vencido")
+    return { p_termino_ate: somarDias(hoje, -1), p_com_saldo: true };
+  if (filtros.termino)
+    return { p_termino_de: hoje, p_termino_ate: somarDias(hoje, filtros.termino) };
+  return {};
+}
+
 export async function buscarLocacoes(contexto: Contexto, filtros: FiltrosLocacao) {
   const supabase = await createSupabaseServerClient();
   const { de } = intervaloPaginacao(filtros.paginacao);
@@ -41,9 +53,8 @@ export async function buscarLocacoes(contexto: Contexto, filtros: FiltrosLocacao
     ...(filtros.local ? { p_local: filtros.local } : {}),
     ...(filtros.de ? { p_periodo_inicio: filtros.de } : {}),
     ...(filtros.ate ? { p_periodo_fim: filtros.ate } : {}),
-    ...(filtros.termino
-      ? { p_termino_ate: somarDias(hojeNoFuso(contexto.empresa.timezone), filtros.termino) }
-      : {}),
+    ...termino(filtros, hojeNoFuso(contexto.empresa.timezone)),
+    ...(filtros.financeiro.length ? { p_status_financeiro: filtros.financeiro } : {}),
     p_limite: filtros.paginacao.tamanho,
     p_offset: de,
   });

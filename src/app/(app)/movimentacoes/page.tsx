@@ -38,6 +38,7 @@ export default async function MovimentacoesPage({ searchParams }: PageProps<"/mo
       .nullable()
       .catch(null)
       .parse(um(p.status) ?? null),
+    paraMim: um(p.para) === "mim",
     paginacao: paginacaoSchema.parse({ pagina: um(p.pagina), tamanho: um(p.tamanho) }),
   };
   const [pendentes, { linhas, total }] = await Promise.all([

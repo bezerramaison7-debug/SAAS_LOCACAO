@@ -24,6 +24,12 @@ describe("lerFiltrosLocacao", () => {
     ]);
   });
 
+  it("situação financeira (links do painel) valida contra a máquina de estados", () => {
+    const f = lerFiltrosLocacao({ financeiro: "ENCERRAMENTO_PENDENTE,XPTO" });
+    expect(f.financeiro).toEqual(["ENCERRAMENTO_PENDENTE"]);
+    expect(temFiltroAtivo(f)).toBe(true);
+  });
+
   it("ignora ids e datas inválidos e ordena o período", () => {
     const f = lerFiltrosLocacao({
       fornecedor: "1 or 1=1",
@@ -42,6 +48,7 @@ describe("lerFiltrosLocacao", () => {
   it("prazo de término só 7, 15 ou 30 e tamanho de página só 25/50/100", () => {
     expect(lerFiltrosLocacao({ termino: "15" }).termino).toBe(15);
     expect(lerFiltrosLocacao({ termino: "10" }).termino).toBeNull();
+    expect(lerFiltrosLocacao({ termino: "vencido" }).termino).toBe("vencido");
     expect(lerFiltrosLocacao({ tamanho: "50", pagina: "3" }).paginacao).toEqual({
       pagina: 3,
       tamanho: 50,

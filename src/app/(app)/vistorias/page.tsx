@@ -8,11 +8,11 @@ import { Pagination } from "@/components/tables/pagination";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { listarVistorias } from "@/features/vistorias/queries";
 import { ROTULO_TIPO_VISTORIA } from "@/features/vistorias/rotulos";
 import { exigirContexto } from "@/lib/auth/contexto";
 import { formatarDataHora } from "@/lib/format/datas";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { intervaloPaginacao, paginacaoSchema } from "@/lib/validation/comum";
+import { paginacaoSchema } from "@/lib/validation/comum";
 
 export const metadata: Metadata = { title: "Vistorias" };
 
@@ -27,31 +27,7 @@ export default async function VistoriasPage({ searchParams }: PageProps<"/vistor
     .nullable()
     .catch(null)
     .parse(um(p.status) ?? null);
-  const { de, ate } = intervaloPaginacao(paginacao);
-  const supabase = await createSupabaseServerClient();
-  let consulta = supabase
-    .from("vistorias")
-    .select(
-      "id, tipo, status, data_evento, bens(codigo), lotes(codigo), modelos_checklist(nome, versao)",
-      { count: "exact" },
-    )
-    .eq("empresa_id", contexto.empresa.id)
-    .neq("status", "CANCELADA")
-    .order("data_evento", { ascending: false })
-    .range(de, ate);
-  if (status) consulta = consulta.eq("status", status);
-  const { data, count, error } = await consulta;
-  if (error) throw new Error("Falha ao listar vistorias");
-  const linhas = (data ?? []).map((v) => ({
-    id: v.id,
-    tipo: v.tipo,
-    status: v.status,
-    dataEvento: v.data_evento,
-    alvo: v.bens?.codigo ?? v.lotes?.codigo ?? "Item em recebimento",
-    checklist: v.modelos_checklist
-      ? `${v.modelos_checklist.nome} v${v.modelos_checklist.versao}`
-      : "—",
-  }));
+  const { linhas, total: count } = await listarVistorias(contexto, { status, paginacao });
   const fuso = contexto.empresa.timezone;
   return (
     <>

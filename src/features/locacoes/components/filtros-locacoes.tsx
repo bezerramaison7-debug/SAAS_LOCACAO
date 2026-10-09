@@ -29,11 +29,16 @@ export function FiltrosLocacoes({
     filtros.local ||
     filtros.de ||
     filtros.ate ||
-    filtros.termino,
+    filtros.termino ||
+    filtros.financeiro.length,
   );
   return (
     <form method="get" role="search" aria-label="Filtrar locações" className="mb-4 space-y-3">
       <input type="hidden" name="tamanho" value={filtros.paginacao.tamanho} />
+      {/* Situação financeira vem dos links do painel; preservada ao refiltrar. */}
+      {filtros.financeiro.map((f) => (
+        <input key={f} type="hidden" name="financeiro" value={f} />
+      ))}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Label htmlFor="filtro-q">
@@ -109,9 +114,10 @@ export function FiltrosLocacoes({
               <option value="">Qualquer data</option>
               {PRAZOS_TERMINO.map((d) => (
                 <option key={d} value={d}>
-                  Vence em até {d} dias (inclui vencidas)
+                  Vence nos próximos {d} dias
                 </option>
               ))}
+              <option value="vencido">Vencido (com itens ainda na empresa)</option>
             </Select>
           </div>
         </div>

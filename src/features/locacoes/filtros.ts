@@ -3,10 +3,17 @@ import { z } from "zod";
 import { type ParametrosBusca } from "@/components/tables/url";
 import { paginacaoSchema, uuidSchema, type Paginacao } from "@/lib/validation/comum";
 
-import { maquinaLocacao, type StatusLocacao } from "./rules/maquina-estado";
+import {
+  maquinaFinanceiro,
+  maquinaLocacao,
+  type StatusFinanceiro,
+  type StatusLocacao,
+} from "./rules/maquina-estado";
 
 export const PRAZOS_TERMINO = [7, 15, 30] as const;
 export type PrazoTermino = (typeof PRAZOS_TERMINO)[number];
+/** Entre hoje e hoje+N (fuso da empresa) ou já vencido com saldo (§5.2). */
+export type FiltroTermino = PrazoTermino | "vencido";
 
 export type FiltrosLocacao = {
   q: string;
@@ -16,7 +23,8 @@ export type FiltrosLocacao = {
   local: string | null;
   de: string | null;
   ate: string | null;
-  termino: PrazoTermino | null;
+  termino: FiltroTermino | null;
+  financeiro: StatusFinanceiro[];
   paginacao: Paginacao;
 };
 
@@ -28,17 +36,22 @@ function primeiro(valor: string | string[] | undefined): string | undefined {
 }
 
 /** Aceita `status=A&status=B` (formulário) e `status=A,B` (link compartilhado). */
-function lerStatus(valor: string | string[] | undefined): StatusLocacao[] {
+function lerLista<T extends string>(
+  valor: string | string[] | undefined,
+  validos: readonly T[],
+): T[] {
   const brutos = (Array.isArray(valor) ? valor : valor ? [valor] : []).flatMap((v) => v.split(","));
-  const validos = maquinaLocacao.estados as readonly string[];
   return [
-    ...new Set(brutos.map((s) => s.trim()).filter((s): s is StatusLocacao => validos.includes(s))),
+    ...new Set(
+      brutos.map((s) => s.trim()).filter((s): s is T => (validos as readonly string[]).includes(s)),
+    ),
   ];
 }
 
 /** Filtros da listagem a partir da URL. Valores inválidos são ignorados (link antigo não quebra a tela). */
 export function lerFiltrosLocacao(params: ParametrosBusca): FiltrosLocacao {
-  const termino = Number(primeiro(params.termino));
+  const terminoBruto = primeiro(params.termino);
+  const termino = Number(terminoBruto);
   let de = dataSchema.parse(primeiro(params.de) ?? null);
   let ate = dataSchema.parse(primeiro(params.ate) ?? null);
   if (de && ate && de > ate) [de, ate] = [ate, de];
@@ -49,15 +62,19 @@ export function lerFiltrosLocacao(params: ParametrosBusca): FiltrosLocacao {
       .max(100)
       .catch("")
       .parse(primeiro(params.q) ?? ""),
-    status: lerStatus(params.status),
+    status: lerLista<StatusLocacao>(params.status, maquinaLocacao.estados),
+    financeiro: lerLista<StatusFinanceiro>(params.financeiro, maquinaFinanceiro.estados),
     fornecedor: idSchema.parse(primeiro(params.fornecedor) ?? null),
     centro: idSchema.parse(primeiro(params.centro) ?? null),
     local: idSchema.parse(primeiro(params.local) ?? null),
     de,
     ate,
-    termino: (PRAZOS_TERMINO as readonly number[]).includes(termino)
-      ? (termino as PrazoTermino)
-      : null,
+    termino:
+      terminoBruto === "vencido"
+        ? "vencido"
+        : (PRAZOS_TERMINO as readonly number[]).includes(termino)
+          ? (termino as PrazoTermino)
+          : null,
     paginacao: paginacaoSchema.parse({
       pagina: primeiro(params.pagina),
       tamanho: primeiro(params.tamanho),
@@ -79,6 +96,14 @@ export function termoLiteral(q: string): string {
 
 export function temFiltroAtivo(f: FiltrosLocacao): boolean {
   return Boolean(
-    f.q || f.status.length || f.fornecedor || f.centro || f.local || f.de || f.ate || f.termino,
+    f.q ||
+    f.status.length ||
+    f.fornecedor ||
+    f.centro ||
+    f.local ||
+    f.de ||
+    f.ate ||
+    f.termino ||
+    f.financeiro.length,
   );
 }

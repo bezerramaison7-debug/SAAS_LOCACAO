@@ -14,13 +14,6 @@ test.describe("layout responsivo", () => {
     }
   });
 
-  test("módulos não entregues informam a fase e não exibem dados nem ações", async ({ page }) => {
-    await page.goto("/relatorios");
-    await expect(page.getByText("Relatórios: disponível a partir da Fase 8")).toBeVisible();
-    await expect(page.locator("main").getByRole("button")).toHaveCount(0);
-    await expect(page.locator("main table")).toHaveCount(0);
-  });
-
   test("texto principal tem pelo menos 16px", async ({ page }) => {
     await page.goto("/dashboard");
     const tamanho = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));

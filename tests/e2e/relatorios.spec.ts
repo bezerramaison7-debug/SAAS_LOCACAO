@@ -3,6 +3,7 @@
  * fotos já registradas no sistema — sem manipular nenhum arquivo à mão.
  */
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -152,4 +153,31 @@ test.describe("formulário de relatórios", () => {
     await expect(p.getByText("Página não encontrada")).toBeVisible();
     await rl.close();
   });
+});
+
+/** Segredo do worker: do ambiente (CI) ou do .env.local (desenvolvimento). */
+function segredoWorker(): string {
+  if (process.env.REPORT_SIGNING_SECRET) return process.env.REPORT_SIGNING_SECRET;
+  const linha = readFileSync(".env.local", "utf8")
+    .split("\n")
+    .find((l) => l.startsWith("REPORT_SIGNING_SECRET="));
+  return linha?.slice("REPORT_SIGNING_SECRET=".length).trim() ?? "";
+}
+
+test("worker de relatórios só aceita o segredo correto e não exige sessão", async ({}, info) => {
+  test.skip(dispositivo(info) !== "desktop", "Endpoint de servidor: uma execução basta");
+  const url = new URL("/api/reports/process", info.project.use.baseURL).toString();
+  for (const cabecalho of [undefined, "Bearer errado", `Bearer ${segredoWorker()}x`]) {
+    const r = await fetch(url, {
+      method: "POST",
+      ...(cabecalho ? { headers: { authorization: cabecalho } } : {}),
+    });
+    expect(r.status, String(cabecalho)).toBe(401);
+  }
+  const ok = await fetch(url, {
+    method: "POST",
+    headers: { authorization: `Bearer ${segredoWorker()}` },
+  });
+  expect(ok.status).toBe(200);
+  expect(await ok.json()).toMatchObject({ concluidos: expect.any(Number), falhas: 0 });
 });

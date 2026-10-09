@@ -10,10 +10,21 @@ export type FiltrosBens = {
   local: string | null;
   /** "Meus itens": só o que está sob responsabilidade do usuário logado. */
   meus: boolean;
+  /** "ativos": ainda sob responsabilidade da empresa (§5.1). */
+  situacao: "ativos" | null;
   paginacao: Paginacao;
 };
 
 /** Bens visíveis pela RLS (RESPONSAVEL_LOCAL vê só os seus). */
+const STATUS_BEM_ATIVO = [
+  "DISPONIVEL",
+  "EM_USO",
+  "EM_TRANSFERENCIA",
+  "EM_MANUTENCAO",
+  "DEVOLUCAO_SOLICITADA",
+  "EXTRAVIADO",
+] as const;
+
 export async function listarBens(contexto: Contexto, filtros: FiltrosBens) {
   const supabase = await createSupabaseServerClient();
   const { de, ate } = intervaloPaginacao(filtros.paginacao);
@@ -29,6 +40,7 @@ export async function listarBens(contexto: Contexto, filtros: FiltrosBens) {
     .range(de, ate);
   if (filtros.local) consulta = consulta.eq("local_atual_id", filtros.local);
   if (filtros.meus) consulta = consulta.eq("responsavel_atual_id", contexto.usuario.id);
+  if (filtros.situacao) consulta = consulta.in("status", [...STATUS_BEM_ATIVO]);
   const busca = filtroBuscaIlike(
     ["codigo", "numero_serie", "placa", "identificacao_fornecedor"],
     filtros.q,
@@ -60,6 +72,7 @@ export async function listarLotes(contexto: Contexto, filtros: FiltrosBens) {
     .range(de, ate);
   if (filtros.local) consulta = consulta.eq("local_atual_id", filtros.local);
   if (filtros.meus) consulta = consulta.eq("responsavel_atual_id", contexto.usuario.id);
+  if (filtros.situacao) consulta = consulta.eq("status", "ATIVO");
   const busca = filtroBuscaIlike(["codigo"], filtros.q);
   if (busca) consulta = consulta.or(busca);
   const { data, count, error } = await consulta;

@@ -31,7 +31,7 @@ for (const tema of ["claro", "escuro"] as const) {
   });
 }
 
-test("telas das Fases 6 e 7 sem violações sérias de acessibilidade", async ({ page }) => {
+test("telas das Fases 6 a 8 sem violações sérias de acessibilidade", async ({ page }) => {
   for (const rota of [
     "/movimentacoes",
     `/movimentacoes/nova?bem=${A.bemEstacao2}`,
@@ -48,6 +48,8 @@ test("telas das Fases 6 e 7 sem violações sérias de acessibilidade", async ({
     "/cobrancas/nova",
     `/cobrancas/${A.cobranca}`,
     `/locacoes/${A.locacaoAtiva}?aba=cobrancas`,
+    "/dashboard",
+    "/relatorios",
   ]) {
     await page.goto(rota);
     await expect(page.getByRole("main")).toBeVisible();
