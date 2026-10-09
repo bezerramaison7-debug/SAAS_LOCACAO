@@ -821,12 +821,14 @@ $$;
 -- ---------------------------------------------------------- linha do tempo --
 -- Eventos do bem/lote, lidos com a RLS de quem consulta (security invoker).
 create function public.linha_do_tempo(p_bem uuid default null, p_lote uuid default null)
-returns table (em timestamptz, tipo text, titulo text, detalhe text, ref_tipo text, ref_id uuid)
+returns table (em timestamptz, tipo text, titulo text, detalhe text, ref_tipo text, ref_id uuid,
+               registrado_em timestamptz)
 language sql stable
 set search_path = ''
 as $$
   -- recebimento
-  select r.data_evento, 'RECEBIMENTO', 'Recebido em ' || coalesce(lc.nome, 'local'), r.codigo, 'recebimento', r.id
+  select r.data_evento, 'RECEBIMENTO', 'Recebido em ' || coalesce(lc.nome, 'local'), r.codigo, 'recebimento', r.id,
+         coalesce(r.confirmado_em, r.created_at)
   from public.recebimentos r
   left join public.locais lc on lc.id = r.local_id
   where r.status in ('CONFIRMADO', 'CANCELADO') and r.id = coalesce(
@@ -834,7 +836,7 @@ as $$
     (select recebimento_id from public.lotes where id = p_lote))
   union all
   -- origem por divisão de lote
-  select l.created_at, 'DIVISAO', 'Criado por divisão do lote ' || o.codigo, null, 'lote', o.id
+  select l.created_at, 'DIVISAO', 'Criado por divisão do lote ' || o.codigo, null, 'lote', o.id, l.created_at
   from public.lotes l join public.lotes o on o.id = l.lote_origem_id
   where l.id = p_lote
   union all
@@ -849,7 +851,7 @@ as $$
            || case when m.quantidade is not null then ' · qtd ' || trim(to_char(m.quantidade, 'FM999999999990.###')) else '' end
            || case when m.aceite_administrativo then ' · aceite administrativo' else '' end
            || case when m.corrige_movimentacao_id is not null then ' · correção' else '' end,
-         'movimentacao', m.id
+         'movimentacao', m.id, m.created_at
   from public.movimentacoes m
   join public.locais lo on lo.id = m.origem_local_id
   join public.locais ld on ld.id = m.destino_local_id
@@ -858,7 +860,7 @@ as $$
   -- vistorias
   select v.data_evento, 'VISTORIA',
          'Vistoria ' || lower(v.tipo::text) || case v.status when 'CONCLUIDA' then ' concluída' else ' em andamento' end,
-         null, 'vistoria', v.id
+         null, 'vistoria', v.id, v.created_at
   from public.vistorias v
   where (v.bem_id = p_bem or v.lote_id = p_lote) and v.status <> 'CANCELADA'
   union all
@@ -867,7 +869,7 @@ as $$
          case when o.tipo = 'TROCA' and o.bem_substituto_id = p_bem then 'Entrou em substituição'
               when o.tipo = 'TROCA' then 'Substituído pelo fornecedor'
               else 'Ocorrência ' || lower(replace(o.tipo::text, '_', ' ')) end,
-         o.codigo || ' · ' || o.descricao, 'ocorrencia', o.id
+         o.codigo || ' · ' || o.descricao, 'ocorrencia', o.id, o.created_at
   from public.ocorrencias o
   where o.bem_id = p_bem or o.lote_id = p_lote or o.bem_substituto_id = p_bem
   union all
@@ -875,11 +877,13 @@ as $$
   select coalesce(o.resolvida_em, o.cancelada_em), 'OCORRENCIA_FIM',
          case when o.status = 'CANCELADA' then 'Ocorrência cancelada' else 'Ocorrência resolvida' end
            || coalesce(' (' || lower(o.resultado::text) || ')', ''),
-         o.codigo || coalesce(' · ' || coalesce(o.resolucao, o.motivo_cancelamento), ''), 'ocorrencia', o.id
+         o.codigo || coalesce(' · ' || coalesce(o.resolucao, o.motivo_cancelamento), ''), 'ocorrencia', o.id,
+         coalesce(o.resolvida_em, o.cancelada_em)
   from public.ocorrencias o
   where (o.bem_id = p_bem or o.lote_id = p_lote) and o.tipo <> 'TROCA'
     and (o.resolvida_em is not null or o.cancelada_em is not null)
-  order by 1 desc, 2
+  -- Mesma data do fato (o formulário tem precisão de minuto): vale a ordem de registro.
+  order by 1 desc, 7 desc, 2
 $$;
 
 -- --------------------------------------------- recebimento: responsável ---

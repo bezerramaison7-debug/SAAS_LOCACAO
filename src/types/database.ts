@@ -2366,6 +2366,7 @@ export type Database = {
           em: string;
           ref_id: string;
           ref_tipo: string;
+          registrado_em: string;
           tipo: string;
           titulo: string;
         }[];

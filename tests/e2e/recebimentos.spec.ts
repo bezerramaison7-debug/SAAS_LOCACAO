@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { dispositivo, larguraExcedente } from "./helpers";
+import { A } from "../support/fixtures";
 import { criarLocacaoAtiva, JPEG_TESTE } from "./support/dados";
 import { arquivoSessao } from "./support/usuarios";
 
@@ -135,7 +136,9 @@ test.describe("Operação — recebimento completo (gate da Fase 5)", () => {
       .getByRole("link", { name: new RegExp(`BEM-\\d+ \\(${serie}\\)`) })
       .click();
     await expect(main(page).getByText("Disponível")).toBeVisible();
-    await expect(main(page).getByText("[DEMO] Obra Residencial Norte")).toBeVisible();
+    await expect(
+      main(page).getByText("[DEMO] Obra Residencial Norte", { exact: true }),
+    ).toBeVisible();
     await expect(main(page).getByRole("link", { name: /Entrada — / })).toBeVisible();
 
     // Evidências privadas: URL assinada só para quem pode ler a entidade.
@@ -312,7 +315,12 @@ test.describe("Documentos e vistorias", () => {
     const ctx = await browser.newContext({ storageState: arquivoSessao("gestorA") });
     const page = await ctx.newPage();
     await page.goto("/vistorias?status=CONCLUIDA");
-    await visivel(main(page).getByRole("link", { name: "BEM-000001" })).click();
+    await expect(visivel(main(page).getByRole("link", { name: /^(BEM|LOT)-\d+$/ }))).toBeVisible();
+    // A vistoria do seed pode sair da 1ª página conforme os testes criam outras: abre pela ficha.
+    await page.goto(`/bens/${A.bemEstacao1}`);
+    await main(page)
+      .getByRole("link", { name: /^Entrada — / })
+      .click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("BEM-000001");
     await expect(main(page).getByText("Concluída (imutável)")).toBeVisible();
     await expect(main(page).getByText("Resposta: Conforme")).toBeVisible();

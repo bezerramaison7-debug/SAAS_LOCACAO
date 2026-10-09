@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { dispositivo } from "./helpers";
+import { A } from "../support/fixtures";
 import { arquivoSessao } from "./support/usuarios";
 
 test.use({ storageState: arquivoSessao("adminA") });
@@ -29,6 +30,32 @@ for (const tema of ["claro", "escuro"] as const) {
     }
   });
 }
+
+test("telas da Fase 6 sem violações sérias de acessibilidade", async ({ page }) => {
+  for (const rota of [
+    "/movimentacoes",
+    `/movimentacoes/nova?bem=${A.bemEstacao2}`,
+    "/ocorrencias",
+    `/ocorrencias/nova?bem=${A.bemEstacao2}`,
+    `/ocorrencias/${A.ocorrenciaBem2}`,
+    `/bens/${A.bemEstacao1}`,
+    `/bens/lotes/${A.loteAndaime}`,
+    `/etiquetas/bem/${A.bemEstacao1}`,
+  ]) {
+    await page.goto(rota);
+    await expect(page.getByRole("main")).toBeVisible();
+    const resultado = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    const graves = resultado.violations.filter(
+      (v) => v.impact === "serious" || v.impact === "critical",
+    );
+    expect(
+      graves.map((v) => `${rota}: ${v.id} (${v.nodes.length})`),
+      "violações sérias/críticas",
+    ).toEqual([]);
+  }
+});
 
 test("tema escolhido é aplicado e persiste após recarregar", async ({ page }) => {
   await page.goto("/dashboard");

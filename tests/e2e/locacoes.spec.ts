@@ -151,9 +151,12 @@ test.describe("Compras", () => {
 
     await page.getByRole("checkbox", { name: "Em devolução" }).uncheck();
     await page.getByRole("checkbox", { name: "Ativa", exact: true }).check();
+    // Busca pelo prefixo dos pedidos do seed: as locações ativas criadas pelos testes não o usam.
+    await page.getByLabel(/^Buscar por código/).fill("45000123");
     await page.getByRole("button", { name: "Filtrar" }).click();
     await expect(page).toHaveURL(/status=ATIVA/);
     await expect(page).toHaveURL(/tamanho=50/);
+    await expect(page).toHaveURL(/q=45000123/);
     await expect(visivel(main(page).getByText("4500012345"))).toBeVisible();
     await expect(main(page).getByText("4500012399")).toHaveCount(0);
 
