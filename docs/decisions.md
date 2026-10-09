@@ -387,3 +387,43 @@ Formato: contexto → decisão → consequências. Status: **Aceita** (vale até
 **Status:** Aceita (Fase 7)
 **Contexto:** A falha intermitente da Fase 6 ("Arquivo enviado." não aparecia) foi reproduzida: um arquivo escolhido antes da hidratação era ignorado sem aviso, porque o `onChange` do React ainda não existia.
 **Decisão:** Campos controlados pelo React (envio de arquivo, tipo de ocorrência, categoria/unidade do item, tipo/opções/regra de foto da pergunta) ficam desabilitados até a hidratação (`useHidratado`, via `useSyncExternalStore`): antes dela, um arquivo escolhido era ignorado e um tipo de ocorrência escolhido era revertido pelo React. Os testes E2E usam `anexar()`, que espera o campo habilitado (seleção e digitação já esperam por padrão).
+
+### D-71 — Indicadores calculados pela consulta da própria lista
+
+**Status:** Aceita (Fase 8)
+**Decisão:** Cada indicador do painel chama a mesma função de consulta (mesmos filtros, mesma RLS) da lista que o seu link abre e usa o total dela. Assim o número sempre bate com a lista (CA-72) e o RESPONSAVEL_LOCAL vê só o que é dele. Para isso as listas ganharam filtros: locações com término entre hoje e hoje+N (antes incluía vencidas), término vencido com saldo e situação financeira; bens/lotes "só ativos"; movimentações "para mim". Cada cartão mostra a regra de cálculo em texto (não só em tooltip). Custo: ~20 contagens por carregamento do painel (aceitável no MVP; reavaliar com volume real).
+
+### D-72 — Pedido de relatório por Server Action com `after()`
+
+**Status:** Aceita (Fase 8)
+**Decisão:** O pedido é uma Server Action (proteção de origem nativa) que chama `rpc_solicitar_relatorio` e responde na hora; o processamento começa em `after()` no mesmo servidor. `GET /api/reports/{id}` devolve a situação (acompanhamento a cada 3 s) e `GET /api/reports/{id}/download` redireciona para URL assinada de 5 min gerada com o cliente do usuário. O worker `POST|GET /api/reports/process` exige `Authorization: Bearer <REPORT_SIGNING_SECRET>` (rota pública no proxy, sem sessão) e deve ser chamado por um agendador a cada minuto (Vercel Cron no plano que permitir, pg_cron + pg_net ou qualquer cron HTTP) para retomar pedidos cujo `after()` não concluiu.
+
+### D-73 — Snapshot no banco, só para o worker
+
+**Status:** Aceita (Fase 8)
+**Decisão:** `relatorio_snapshot` monta todas as seções numa única instrução (leitura consistente) e só o `service_role` executa; a empresa vem do job, nunca de parâmetro. `incluir_valores` (valores contratados e cobranças) é decidido no pedido pela permissão `valores.ver` de quem pediu.
+
+### D-74 — Template PDF
+
+**Status:** Aceita (Fase 8)
+**Decisão:** `@react-pdf/renderer` 4.9.0 com Helvetica embutida (WinAnsi): `textoPdf` mantém acentos do português e troca caracteres sem glifo por "?"; sem hifenização; hashes impressos em grupos de 8 (quebra só nos espaços). Fotos baixadas do storage privado e normalizadas com `sharp` (orientação EXIF, sem metadados, até 1600 px, JPEG q72); foto ilegível vira aviso com o hash do original. Máximo de 300 fotos por relatório, com aviso no PDF quando houver mais.
+
+### D-75 — Integridade do relatório
+
+**Status:** Aceita (Fase 8)
+**Decisão:** `hash_dados` = SHA-256 do JSON canônico do snapshot (impresso na capa e no rodapé de cada página); `hash_arquivo` = SHA-256 do PDF (no banco, pois não pode estar dentro do arquivo); `assinatura_hmac` = HMAC-SHA256(`REPORT_SIGNING_SECRET`, `relatorio:v1|id|hash_dados|hash_arquivo`). Relatório concluído é imutável; gerar de novo cria outro código (RN-112).
+
+### D-76 — Fila de relatórios
+
+**Status:** Aceita (Fase 8)
+**Decisão:** `relatorio_reivindicar` (service_role) primeiro aplica o watchdog (PROCESSANDO há mais de 10 min → ERRO), devolve à fila os ERRO com menos de 3 tentativas e então reivindica um job com `for update skip locked`. Falha registra mensagem operacional (detalhe técnico só no log). Após 3 tentativas a página oferece um novo pedido. Limite de 10 pedidos por usuário a cada 10 minutos.
+
+### D-77 — Tipos de relatório
+
+**Status:** Aceita (Fase 8)
+**Decisão:** LOCACAO: todas as seções da especificação. BEM: ficha, recebimento, vistorias, movimentações, ocorrências, devoluções e fotos do bem. LOCAL: bens e lotes que estão hoje no local, com o histórico deles. PERIODO: eventos da empresa no intervalo (até 1 ano, dias civis no fuso da empresa), sem fichas nem fotos.
+
+### D-78 — Foto de teste decodificável
+
+**Status:** Aceita (Fase 8)
+**Decisão:** A foto de teste dos E2E passou a ser um JPEG válido (24×16) — o JPEG mínimo anterior passava pela checagem de assinatura, mas não é decodificável, e o relatório corretamente o mostraria como "imagem indisponível".

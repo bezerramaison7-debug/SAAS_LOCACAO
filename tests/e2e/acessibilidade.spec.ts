@@ -32,6 +32,8 @@ for (const tema of ["claro", "escuro"] as const) {
 }
 
 test("telas das Fases 6 a 8 sem violações sérias de acessibilidade", async ({ page }) => {
+  // 17 telas com axe: o orçamento padrão de 30 s não basta com a suíte em paralelo.
+  test.setTimeout(120_000);
   for (const rota of [
     "/movimentacoes",
     `/movimentacoes/nova?bem=${A.bemEstacao2}`,

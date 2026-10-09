@@ -217,3 +217,15 @@ Provas: `tests/integration/movimentacoes.test.ts`, `tests/e2e/movimentacoes.spec
 | Estimativa                                      | `cobranca.ver_estimativa` (ADMIN, COMPRAS, FINANCEIRO, GESTOR, AUDITOR)             | `estimativa_locacao`                                                                                                                                      |
 
 Provas: `tests/integration/devolucoes.test.ts`, `tests/e2e/devolucoes.spec.ts`.
+
+## 13. Painel e relatórios (Fase 8)
+
+| Recurso                   | Interface/servidor                                                 | Banco                                                               |
+| ------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `/dashboard`              | qualquer membro; grupos conforme `dados.ler_geral` e `valores.ver` | mesmas consultas (e RLS) das listas                                 |
+| Pedir relatório           | `relatorio.gerar` (todos exceto RESPONSAVEL_LOCAL)                 | `rpc_solicitar_relatorio` (alvo da empresa ativa + limite de taxa)  |
+| Ver/baixar relatório      | quem pediu (ou quem tem `auditoria.ler`)                           | RLS `relatorios` + policy do bucket `relatorios` (só CONCLUIDO)     |
+| Fila, snapshot, conclusão | worker com `REPORT_SIGNING_SECRET`                                 | `relatorio_reivindicar/snapshot/concluir/falhar`: só `service_role` |
+| Valores no PDF            | incluídos só se quem pediu tem `valores.ver`                       | decidido em `rpc_solicitar_relatorio`                               |
+
+Provas: `tests/integration/relatorios.test.ts`, `tests/e2e/relatorios.spec.ts`, `tests/e2e/painel.spec.ts`.

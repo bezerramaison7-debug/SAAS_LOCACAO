@@ -235,6 +235,7 @@ Exclusividade bem/lote: `check ((bem_id is null) <> (lote_id is null))` em `iten
 | `20261008123000_recebimento_vistoria_evidencias.sql` (Fase 5) | recebimento transacional, excesso, descarte/cancelamento, vistoria de entrada, respostas, evidências   |
 | `20261008124000_movimentacoes_ocorrencias.sql` (Fase 6)       | movimentação/aceite/divisão de lote, ocorrências com efeito, troca, vistoria periódica, linha do tempo |
 | `20261008125000_devolucoes_cobrancas.sql` (Fase 7)            | devolução em etapas, vistoria de saída, comprovante, ciência, cobranças, estimativa, encerramentos     |
+| `20261008126000_painel_relatorios.sql` (Fase 8)               | filtros do painel em `buscar_locacoes`; pedido, fila, snapshot, conclusão e falha de relatórios        |
 
 Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `npm run db:types`; o CI falha se estiver desatualizado).
 
@@ -257,6 +258,12 @@ Seed: `supabase/seed.sql` (D-18). Tipos: `src/types/database.ts` (gerado por `np
 - `src/features/devolucoes` (schemas, queries, actions, formulários de solicitação, agendamento e retirada) e `src/app/(app)/devolucoes/**` (lista com visões e pendências, nova a partir da locação, detalhe com itens, vistoria de saída, comprovante, conferência e ciência).
 - `src/features/cobrancas` e `src/app/(app)/cobrancas/**` (lista com pendências do financeiro, registro, detalhe com conferir/divergir/resolver e documento); `EstimativaLocacao` na aba Cobranças da locação.
 - `src/features/encerramentos` (`PainelEncerramentos` na página da locação: operacional e financeiro lado a lado, cada um com pendências e ação próprias).
+
+### 4.8 Painel e relatórios (Fase 8)
+
+- `src/features/painel/indicadores.ts`: indicadores a partir das funções das listas (D-71); `src/app/(app)/dashboard`.
+- `src/lib/relatorios`: `integridade.ts` (JSON canônico, SHA-256, HMAC, autorização do worker), `snapshot.ts` (esquema Zod + `textoPdf`), `fotos.ts` (sharp), `pdf/documento.tsx` (template), `processar.ts` (fila → snapshot → fotos → PDF → storage → conclusão).
+- `src/features/relatorios` (Server Action com `after()`, consultas, formulário, acompanhamento) e `src/app/(app)/relatorios/**`; `src/app/api/reports/{process,[id],[id]/download}`.
 
 ## 5. Camadas de autorização (defesa em profundidade)
 
@@ -347,8 +354,8 @@ Ações auditadas (mínimo): criação/alteração/ativação/cancelamento de lo
 
 ## 9. Relatórios PDF [D-16]
 
-- `POST /api/reports` → valida, rate limit, cria `relatorios` `PENDENTE`, responde 202 com id. Em seguida `after()` do Next dispara o processamento (best effort).
-- Worker `POST /api/reports/process` (protegido por `REPORT_SIGNING_SECRET`/cabeçalho de cron) reivindica jobs com `update … where status='PENDENTE' … for update skip locked`, marca `PROCESSANDO`, monta **snapshot** de dados (consulta única via função `relatorio_locacao_snapshot(id)`), baixa fotos do storage, normaliza com `sharp` (máx. 1600 px, JPEG), renderiza com `@react-pdf/renderer`, calcula `hash_dados` (SHA-256 do JSON canônico — impresso no rodapé) e `hash_arquivo` (SHA-256 do PDF — no banco), `assinatura_hmac` (HMAC-SHA256 com `REPORT_SIGNING_SECRET`), envia ao bucket `relatorios`, marca `CONCLUIDO`.
+- Pedido por Server Action (`solicitarRelatorio`) → `rpc_solicitar_relatorio` valida alvo, permissão e limite de taxa, cria `relatorios` `PENDENTE` e a página de acompanhamento abre na hora; `after()` dispara o processamento (best effort) — D-72.
+- Worker `POST /api/reports/process` (protegido por `REPORT_SIGNING_SECRET`/cabeçalho de cron) reivindica jobs com `update … where status='PENDENTE' … for update skip locked`, marca `PROCESSANDO`, monta **snapshot** de dados (consulta única via `relatorio_snapshot(id)`), baixa fotos do storage, normaliza com `sharp` (máx. 1600 px, JPEG), renderiza com `@react-pdf/renderer` 4.9.0, calcula `hash_dados` (SHA-256 do JSON canônico — impresso no rodapé) e `hash_arquivo` (SHA-256 do PDF — no banco), `assinatura_hmac` (HMAC-SHA256 com `REPORT_SIGNING_SECRET`), envia ao bucket `relatorios`, marca `CONCLUIDO`.
 - Agendador externo (Vercel Cron **ou** pg_cron + `pg_net` **ou** qualquer cron HTTP) chama o worker a cada minuto para pegar pendentes/retentativas e o watchdog de `PROCESSANDO` > 10 min. Nada depende exclusivamente da Vercel.
 - UI faz _polling_ de `GET /api/reports/{id}` (2–5 s) e oferece download via URL assinada.
 - Limites: máx. N fotos por relatório (configurável, padrão 300); acima disso, paginação por seções.
