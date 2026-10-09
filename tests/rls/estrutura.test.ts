@@ -138,4 +138,34 @@ describe("estrutura de segurança do banco", () => {
     );
     expect(semIndice).toEqual([]);
   });
+
+  it("toda função SECURITY DEFINER chamável pelo usuário revalida empresa/permissão (F9.3)", async () => {
+    // Cada função pública que ignora RLS precisa conferir, ela mesma, o acesso:
+    // por `usuario_tem_permissao`/`pode_ler`/`usuario_pertence_empresa`, por um
+    // auxiliar de domínio que faz isso, ou pelo próprio `auth.uid()`.
+    const semChecagem = await comoAtor(superusuario, (s) =>
+      s.query<{ funcao: string }>(
+        `select p.proname as funcao
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.prosecdef
+           and has_function_privilege('authenticated', p.oid, 'execute')
+           and p.prosrc !~ '(usuario_tem_permissao|pode_ler|usuario_pertence_empresa|devolucao_gerenciavel|locacao_para_devolucao|cobranca_gerenciavel|recebimento_editavel|ocorrencia_tratavel|validar_anexo|inserir_evidencia|auth\\.uid)'
+         order by 1`,
+      ),
+    );
+    expect(semChecagem).toEqual([]);
+  });
+
+  it("fila e snapshot de relatórios só para o service_role", async () => {
+    const expostas = await comoAtor(superusuario, (s) =>
+      s.query<{ funcao: string }>(
+        `select p.proname as funcao
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.proname like 'relatorio\\_%'
+           and (has_function_privilege('authenticated', p.oid, 'execute')
+                or not has_function_privilege('service_role', p.oid, 'execute'))`,
+      ),
+    );
+    expect(expostas).toEqual([]);
+  });
 });
