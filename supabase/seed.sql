@@ -257,6 +257,12 @@ begin
   values (mov_bem1_a, emp_a, bem_estacao1_a, local_alm_a, local_obra1_a, u_operacao_a, u_resp_a,
           now() - interval '30 days', '[DEMONSTRAÇÃO] Envio para levantamento topográfico', 'CONFIRMADA',
           now() - interval '30 days', u_resp_a);
+  -- Lote de andaimes levado do almoxarifado para a obra (todo o saldo: mesmo lote).
+  insert into public.movimentacoes (empresa_id, lote_id, quantidade, lote_destino_id, origem_local_id, destino_local_id,
+    responsavel_anterior_id, novo_responsavel_id, data_evento, motivo, status, confirmada_em, aceita_por)
+  values (emp_a, lote_andaime_a, 60, lote_andaime_a, local_alm_a, local_obra2_a, u_operacao_a, u_operacao_a,
+          now() - interval '36 days', '[DEMONSTRAÇÃO] Andaimes para a obra da ponte', 'CONFIRMADA',
+          now() - interval '36 days', u_operacao_a);
 
   -- Ocorrência aberta e vencida
   insert into public.ocorrencias (id, empresa_id, locacao_id, bem_id, tipo, descricao, prioridade, responsavel_id, prazo, data_evento)

@@ -2359,8 +2359,20 @@ export type Database = {
           ja_recebida: string;
         }[];
       };
+      linha_do_tempo: {
+        Args: { p_bem?: string; p_lote?: string };
+        Returns: {
+          detalhe: string;
+          em: string;
+          ref_id: string;
+          ref_tipo: string;
+          tipo: string;
+          titulo: string;
+        }[];
+      };
       pendencias_ativacao_locacao: { Args: { p_locacao: string }; Returns: string[] };
       pendencias_recebimento: { Args: { p_recebimento: string }; Returns: string[] };
+      pendencias_vistoria: { Args: { p_vistoria: string }; Returns: string[] };
       registrar_evento_autenticacao: {
         Args: {
           p_email_hash?: string;
@@ -2370,6 +2382,10 @@ export type Database = {
           p_request_id?: string;
           p_user_id?: string;
         };
+        Returns: undefined;
+      };
+      rpc_aceitar_movimentacao: {
+        Args: { p_justificativa?: string; p_movimentacao: string };
         Returns: undefined;
       };
       rpc_adicionar_bem_recebimento: {
@@ -2394,10 +2410,19 @@ export type Database = {
         Returns: undefined;
       };
       rpc_cancelar_locacao: { Args: { p_locacao: string; p_motivo: string }; Returns: undefined };
+      rpc_cancelar_movimentacao: {
+        Args: { p_motivo: string; p_movimentacao: string };
+        Returns: undefined;
+      };
+      rpc_cancelar_ocorrencia: {
+        Args: { p_motivo: string; p_ocorrencia: string };
+        Returns: undefined;
+      };
       rpc_cancelar_recebimento_confirmado: {
         Args: { p_motivo: string; p_recebimento: string };
         Returns: undefined;
       };
+      rpc_concluir_vistoria: { Args: { p_vistoria: string }; Returns: undefined };
       rpc_confirmar_recebimento: {
         Args: { p_recebimento: string };
         Returns: Database["public"]["Enums"]["status_recebimento"];
@@ -2419,6 +2444,14 @@ export type Database = {
       rpc_descartar_recebimento: {
         Args: { p_motivo: string; p_recebimento: string };
         Returns: undefined;
+      };
+      rpc_iniciar_vistoria: {
+        Args: {
+          p_bem?: string;
+          p_lote?: string;
+          p_tipo: Database["public"]["Enums"]["tipo_vistoria"];
+        };
+        Returns: string;
       };
       rpc_iniciar_vistoria_entrada: { Args: { p_linha: string }; Returns: string };
       rpc_listar_usuarios_empresa: {
@@ -2449,7 +2482,15 @@ export type Database = {
         }[];
       };
       rpc_publicar_checklist: { Args: { p_modelo: string }; Returns: undefined };
+      rpc_reabrir_ocorrencia: {
+        Args: { p_motivo: string; p_ocorrencia: string };
+        Returns: undefined;
+      };
       rpc_reabrir_recebimento: { Args: { p_recebimento: string }; Returns: undefined };
+      rpc_recusar_movimentacao: {
+        Args: { p_motivo: string; p_movimentacao: string };
+        Returns: undefined;
+      };
       rpc_registrar_evidencia: {
         Args: {
           p_capturada_em?: string;
@@ -2468,11 +2509,47 @@ export type Database = {
         };
         Returns: string;
       };
+      rpc_registrar_movimentacao: {
+        Args: {
+          p_bem?: string;
+          p_corrige?: string;
+          p_data_evento: string;
+          p_destino_local: string;
+          p_lote?: string;
+          p_motivo: string;
+          p_novo_responsavel: string;
+          p_quantidade?: number;
+        };
+        Returns: string;
+      };
+      rpc_registrar_ocorrencia: {
+        Args: {
+          p_bem?: string;
+          p_data_evento: string;
+          p_descricao: string;
+          p_locacao?: string;
+          p_lote?: string;
+          p_manutencao?: boolean;
+          p_prazo?: string;
+          p_prioridade?: Database["public"]["Enums"]["prioridade"];
+          p_quantidade?: number;
+          p_tipo: Database["public"]["Enums"]["tipo_ocorrencia"];
+        };
+        Returns: string;
+      };
       rpc_remover_evidencia: {
         Args: { p_evidencia: string; p_motivo: string };
         Returns: undefined;
       };
       rpc_remover_linha_recebimento: { Args: { p_linha: string }; Returns: undefined };
+      rpc_resolver_ocorrencia: {
+        Args: {
+          p_ocorrencia: string;
+          p_resolucao: string;
+          p_resultado: Database["public"]["Enums"]["resultado_ocorrencia"];
+        };
+        Returns: undefined;
+      };
       rpc_salvar_respostas_vistoria: {
         Args: { p_respostas: Json; p_vistoria: string };
         Returns: undefined;
@@ -2489,6 +2566,21 @@ export type Database = {
           p_nome_original?: string;
           p_storage_path: string;
           p_tamanho_bytes: number;
+        };
+        Returns: string;
+      };
+      rpc_tratar_ocorrencia: {
+        Args: { p_ocorrencia: string; p_prazo?: string; p_responsavel?: string };
+        Returns: undefined;
+      };
+      rpc_trocar_bem: {
+        Args: {
+          p_bem: string;
+          p_data_evento: string;
+          p_identificacao_fornecedor?: string;
+          p_motivo: string;
+          p_numero_serie?: string;
+          p_placa?: string;
         };
         Returns: string;
       };
