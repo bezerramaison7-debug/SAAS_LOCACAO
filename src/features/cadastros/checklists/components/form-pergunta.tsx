@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/forms/submit-button";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/input";
 import { ESTADO_INICIAL } from "@/lib/actions/estado";
+import { useHidratado } from "@/lib/hooks/hidratado";
 
 import { CampoCheckbox, CampoTexto } from "../../components/campos";
 import { salvarPergunta } from "../actions";
@@ -35,6 +36,7 @@ export function FormPergunta({
 }) {
   const [estado, acao] = useActionState(salvarPergunta, ESTADO_INICIAL);
   const v = estado.valores;
+  const hidratado = useHidratado();
   const [tipo, setTipo] = useState<TipoResposta>(
     (v?.tipoResposta as TipoResposta | undefined) ??
       pergunta?.tipoResposta ??
@@ -94,7 +96,12 @@ export function FormPergunta({
         obrigatorio
       >
         {(a) => (
-          <Select {...a} value={tipo} onChange={(e) => setTipo(e.target.value as TipoResposta)}>
+          <Select
+            {...a}
+            disabled={!hidratado}
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoResposta)}
+          >
             {TIPOS_RESPOSTA.map((t) => (
               <option key={t} value={t}>
                 {ROTULO_TIPO_RESPOSTA[t]}
@@ -105,7 +112,14 @@ export function FormPergunta({
       </FormField>
       {tipo === "OPCAO_UNICA" ? (
         <FormField nome="opcoes" rotulo="Opções (uma por linha)" erro={erros.opcoes} obrigatorio>
-          {(a) => <Textarea {...a} value={opcoes} onChange={(e) => setOpcoes(e.target.value)} />}
+          {(a) => (
+            <Textarea
+              {...a}
+              disabled={!hidratado}
+              value={opcoes}
+              onChange={(e) => setOpcoes(e.target.value)}
+            />
+          )}
         </FormField>
       ) : (
         <input type="hidden" name="opcoes" value="" />
@@ -118,7 +132,12 @@ export function FormPergunta({
       />
       <FormField nome="fotoModo" rotulo="Exigir foto" erro={erros.fotoModo} obrigatorio>
         {(a) => (
-          <Select {...a} value={modoFoto} onChange={(e) => setModoFoto(e.target.value as ModoFoto)}>
+          <Select
+            {...a}
+            disabled={!hidratado}
+            value={modoFoto}
+            onChange={(e) => setModoFoto(e.target.value as ModoFoto)}
+          >
             {MODOS_FOTO.map((m) => (
               <option key={m} value={m}>
                 {ROTULO_MODO_FOTO[m]}

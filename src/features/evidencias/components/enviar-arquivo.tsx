@@ -2,11 +2,12 @@
 
 import { Camera, FileUp, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { useId, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/components/ui/cn";
 import { buttonVariants } from "@/components/ui/button";
+import { useHidratado } from "@/lib/hooks/hidratado";
 import { type EntidadeEvidencia, type TipoEvidencia } from "@/lib/evidencias/arquivo";
 
 type Props = {
@@ -41,13 +42,7 @@ export function EnviarArquivo({
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const foto = tipo === "FOTO";
-  // Só habilita depois da hidratação: um arquivo escolhido antes disso seria
-  // ignorado em silêncio (o onChange do React ainda não existe).
-  const hidratado = useSyncExternalStore(
-    () => () => undefined,
-    () => true,
-    () => false,
-  );
+  const hidratado = useHidratado();
 
   async function enviar(arquivo: File) {
     setEnviando(true);

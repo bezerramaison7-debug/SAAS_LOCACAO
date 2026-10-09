@@ -13,6 +13,7 @@ import {
   CampoTexto,
 } from "@/features/cadastros/components/campos";
 import { ESTADO_INICIAL } from "@/lib/actions/estado";
+import { useHidratado } from "@/lib/hooks/hidratado";
 
 import { registrarOcorrencia, resolverOcorrencia, tratarOcorrencia } from "../actions";
 import {
@@ -38,6 +39,7 @@ export function FormOcorrencia({
 }) {
   const [estado, acao] = useActionState(registrarOcorrencia, ESTADO_INICIAL);
   const permitidos = TIPOS_REGISTRAVEIS.filter((t) => tiposPermitidos.includes(t));
+  const hidratado = useHidratado();
   const [tipo, setTipo] = useState<TipoOcorrencia>(
     (estado.valores?.tipo as TipoOcorrencia | undefined) ?? permitidos[0] ?? "OUTRO",
   );
@@ -50,7 +52,12 @@ export function FormOcorrencia({
       <div className="grid gap-4 md:grid-cols-2">
         <FormField nome="tipo" rotulo="Tipo" erro={estado.errosCampo?.tipo} obrigatorio>
           {(a) => (
-            <Select {...a} value={tipo} onChange={(e) => setTipo(e.target.value as TipoOcorrencia)}>
+            <Select
+              {...a}
+              disabled={!hidratado}
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoOcorrencia)}
+            >
               {permitidos.map((t) => (
                 <option key={t} value={t}>
                   {ROTULO_TIPO_OCORRENCIA[t]}

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { CampoSelecao, CampoTexto } from "@/features/cadastros/components/campos";
 import { ESTADO_INICIAL } from "@/lib/actions/estado";
+import { useHidratado } from "@/lib/hooks/hidratado";
 import { formatarQuantidade, valorEditavelBR } from "@/lib/format/moeda";
 
 import { salvarItem } from "../actions";
@@ -38,6 +39,7 @@ export function FormItem({
   categorias: OpcaoCategoria[];
 }) {
   const [estado, acao] = useActionState(salvarItem, ESTADO_INICIAL);
+  const hidratado = useHidratado();
   const [categoriaId, setCategoriaId] = useState(
     estado.valores?.categoriaId ?? item?.categoriaId ?? "",
   );
@@ -82,6 +84,7 @@ export function FormItem({
         {(a) => (
           <Select
             {...a}
+            disabled={!hidratado}
             value={categoriaId}
             onChange={(e) => {
               setCategoriaId(e.target.value);
@@ -115,7 +118,14 @@ export function FormItem({
           obrigatorio
         />
         <FormField nome="unidade" rotulo="Unidade" erro={estado.errosCampo?.unidade} obrigatorio>
-          {(a) => <Input {...a} value={unidade} onChange={(e) => setUnidade(e.target.value)} />}
+          {(a) => (
+            <Input
+              {...a}
+              disabled={!hidratado}
+              value={unidade}
+              onChange={(e) => setUnidade(e.target.value)}
+            />
+          )}
         </FormField>
         <CampoTexto
           estado={estado}
