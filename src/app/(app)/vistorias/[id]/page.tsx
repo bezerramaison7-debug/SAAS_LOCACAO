@@ -94,6 +94,14 @@ export default async function VistoriaPage({ params, searchParams }: PageProps<"
             Ver lote
           </Link>
         ) : null}
+        {v.evento_origem_tipo === "DEVOLUCAO" && v.evento_origem_id ? (
+          <Link
+            href={`/devolucoes/${v.evento_origem_id}`}
+            className="text-primaria hover:underline"
+          >
+            Ver devolução
+          </Link>
+        ) : null}
         {v.evento_origem_tipo === "RECEBIMENTO" && v.evento_origem_id ? (
           <Link
             href={`/recebimentos/${v.evento_origem_id}`}

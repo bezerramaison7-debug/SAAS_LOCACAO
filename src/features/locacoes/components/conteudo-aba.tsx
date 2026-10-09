@@ -395,7 +395,14 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
               chave: "codigo",
               titulo: "Devolução",
               principal: true,
-              render: (d) => <span className="font-mono font-medium">{d.codigo}</span>,
+              render: (d) => (
+                <Link
+                  href={`/devolucoes/${d.id}`}
+                  className="font-mono font-medium text-primaria hover:underline"
+                >
+                  {d.codigo}
+                </Link>
+              ),
             },
             {
               chave: "status",
@@ -433,7 +440,14 @@ export async function ConteudoAba({ contexto, locacao, aba }: Props) {
               chave: "codigo",
               titulo: "Cobrança",
               principal: true,
-              render: (c) => <span className="font-mono font-medium">{c.codigo}</span>,
+              render: (c) => (
+                <Link
+                  href={`/cobrancas/${c.id}`}
+                  className="font-mono font-medium text-primaria hover:underline"
+                >
+                  {c.codigo}
+                </Link>
+              ),
             },
             {
               chave: "competencia",

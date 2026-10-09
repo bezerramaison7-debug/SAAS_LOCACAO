@@ -2,7 +2,7 @@
 
 import { Camera, FileUp, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/components/ui/cn";
@@ -41,6 +41,13 @@ export function EnviarArquivo({
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const foto = tipo === "FOTO";
+  // Só habilita depois da hidratação: um arquivo escolhido antes disso seria
+  // ignorado em silêncio (o onChange do React ainda não existe).
+  const hidratado = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   async function enviar(arquivo: File) {
     setEnviando(true);
@@ -96,7 +103,7 @@ export function EnviarArquivo({
               : "image/jpeg,image/png,image/webp,application/pdf"
           }
           {...(foto ? { capture: "environment" as const } : {})}
-          disabled={enviando}
+          disabled={enviando || !hidratado}
           onChange={(e) => {
             const arquivo = e.target.files?.[0];
             if (arquivo) void enviar(arquivo);

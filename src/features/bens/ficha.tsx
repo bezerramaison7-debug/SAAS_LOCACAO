@@ -48,6 +48,12 @@ export async function CabecalhoFicha({
       .eq("status", "PENDENTE_ACEITE"),
     supabase.from("vistorias").select("id, tipo").eq(coluna, alvo.id).eq("status", "RASCUNHO"),
   ]);
+  const { data: devolucoes } = await supabase
+    .from("itens_devolucao")
+    .select("devolucoes!inner(id, codigo, status)")
+    .eq(coluna, alvo.id)
+    .eq("ativo", true)
+    .in("devolucoes.status", ["SOLICITADA", "AGENDADA"]);
   const ativo =
     alvo.tipo === "bem" ? MOVIMENTAVEIS_BEM.includes(alvo.status) : alvo.status === "ATIVO";
   const param = alvo.tipo === "bem" ? `bem=${alvo.id}` : `lote=${alvo.id}`;
@@ -71,6 +77,13 @@ export async function CabecalhoFicha({
         >
           <Link href={`/ocorrencias/${o.id}`} className="text-primaria hover:underline">
             Ver ocorrência
+          </Link>
+        </Alert>
+      ))}
+      {(devolucoes ?? []).map(({ devolucoes: d }) => (
+        <Alert key={d.id} tom="info" titulo={`Devolução ${d.codigo} aguardando retirada`}>
+          <Link href={`/devolucoes/${d.id}`} className="text-primaria hover:underline">
+            Ver devolução
           </Link>
         </Alert>
       ))}

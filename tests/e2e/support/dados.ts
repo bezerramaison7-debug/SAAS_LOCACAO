@@ -95,11 +95,16 @@ export async function criarAtivosRecebidos(
   empresa: keyof typeof EMPRESAS_E2E,
   rotulo: string,
   quantidadeBens = 1,
-): Promise<AtivosRecebidos> {
+  opcoes: { loteSemChecklist?: boolean } = {},
+): Promise<AtivosRecebidos & { locacaoId: string }> {
   const cfg = EMPRESAS_E2E[empresa];
   const locacao =
     empresa === "A"
-      ? await criarLocacaoAtiva(rotulo, { individual: quantidadeBens, lote: 20 })
+      ? await criarLocacaoAtiva(
+          rotulo,
+          { individual: Math.max(quantidadeBens, 1), lote: 20 },
+          opcoes,
+        )
       : null;
   const cliente = new pg.Client({ connectionString: URL });
   await cliente.connect();
@@ -173,7 +178,7 @@ export async function criarAtivosRecebidos(
       );
     }
     await cliente.query("commit");
-    return { locacao: locacaoCodigo, bens, lote };
+    return { locacao: locacaoCodigo, locacaoId: locacaoId ?? "", bens, lote };
   } catch (erro) {
     await cliente.query("rollback");
     throw erro;

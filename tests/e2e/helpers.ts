@@ -1,4 +1,4 @@
-import { type Page, type TestInfo } from "@playwright/test";
+import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 export type Dispositivo = "celular" | "tablet" | "desktop";
 
@@ -29,4 +29,16 @@ export async function larguraExcedente(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
+}
+
+/**
+ * Escolhe o arquivo só depois que o campo está habilitado (o componente de
+ * envio fica desabilitado até a hidratação — antes disso o arquivo seria ignorado).
+ */
+export async function anexar(
+  campo: Locator,
+  arquivo: { name: string; mimeType: string; buffer: Buffer },
+): Promise<void> {
+  await expect(campo).toBeEnabled();
+  await campo.setInputFiles(arquivo);
 }

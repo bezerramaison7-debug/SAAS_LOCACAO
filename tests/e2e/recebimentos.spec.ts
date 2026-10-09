@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
-import { dispositivo, larguraExcedente } from "./helpers";
+import { anexar, dispositivo, larguraExcedente } from "./helpers";
 import { A } from "../support/fixtures";
 import { criarLocacaoAtiva, JPEG_TESTE } from "./support/dados";
 import { arquivoSessao } from "./support/usuarios";
@@ -35,7 +35,7 @@ async function iniciarRecebimento(page: Page, locacaoId: string) {
 async function responderVistoria(page: Page) {
   const regiao = page.getByRole("region", { name: /^Vistoria de / });
   // Foto exigida pela pergunta 1 (SEMPRE) antes das respostas.
-  await regiao.getByLabel("Foto desta pergunta").first().setInputFiles(foto("pergunta1.jpg"));
+  await anexar(regiao.getByLabel("Foto desta pergunta").first(), foto("pergunta1.jpg"));
   await expect(regiao.getByText("Arquivo enviado.").first()).toBeVisible();
   await expect(regiao.locator("img").first()).toBeVisible();
   await regiao.getByRole("radio", { name: "Conforme", exact: true }).check();
@@ -86,7 +86,7 @@ test.describe("Operação — recebimento completo (gate da Fase 5)", () => {
     await expect(fotosBem.getByText("Avariado — foto obrigatória")).toBeVisible();
     const campo = fotosBem.getByLabel("Tirar foto");
     await expect(campo).toHaveAttribute("capture", "environment");
-    await campo.setInputFiles(foto("avaria.jpg"));
+    await anexar(campo, foto("avaria.jpg"));
     await expect(fotosBem.locator("img")).toBeVisible();
     // A miniatura carrega de fato (URL assinada aceita pela CSP e imagem decodificada).
     await expect
@@ -97,9 +97,11 @@ test.describe("Operação — recebimento completo (gate da Fase 5)", () => {
     await semEstouro(page, "fotos");
 
     // Arquivo que não é imagem é recusado pelo conteúdo, não pela extensão.
-    await fotosBem
-      .getByLabel("Tirar foto")
-      .setInputFiles({ name: "falsa.jpg", mimeType: "image/jpeg", buffer: Buffer.from("<html>") });
+    await anexar(fotosBem.getByLabel("Tirar foto"), {
+      name: "falsa.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.from("<html>"),
+    });
     await expect(
       fotosBem.getByText("Formato não aceito. Envie JPG, PNG, WEBP ou PDF."),
     ).toBeVisible();
@@ -294,7 +296,7 @@ test.describe("Documentos e vistorias", () => {
     const compras = await browser.newContext({ storageState: arquivoSessao("comprasA") });
     const page = await compras.newPage();
     await page.goto(`/locacoes/${locacao.id}?aba=evidencias`);
-    await page.getByLabel("Anexar contrato").setInputFiles({
+    await anexar(page.getByLabel("Anexar contrato"), {
       name: "contrato-assinado.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"),

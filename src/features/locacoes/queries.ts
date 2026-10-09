@@ -78,6 +78,11 @@ export type Locacao = {
   canceladaEm: string | null;
   motivoCancelamento: string | null;
   criadaEm: string;
+  inicioEfetivo: string | null;
+  desmobilizacaoIniciadaEm: string | null;
+  encerradaOperacionalEm: string | null;
+  dataEncerramentoFinanceiro: string | null;
+  encerradaFinanceiroEm: string | null;
 };
 
 export async function obterLocacao(contexto: Contexto, id: string): Promise<Locacao | null> {
@@ -85,7 +90,7 @@ export async function obterLocacao(contexto: Contexto, id: string): Promise<Loca
   const { data } = await supabase
     .from("locacoes")
     .select(
-      "id, codigo, status, status_financeiro, fornecedor_id, centro_custo_id, inicio_previsto, termino_previsto, observacoes, ativada_em, cancelada_em, motivo_cancelamento, created_at, fornecedores(razao_social, nome_fantasia), centros_custo(codigo, nome)",
+      "id, codigo, status, status_financeiro, fornecedor_id, centro_custo_id, inicio_previsto, termino_previsto, observacoes, ativada_em, cancelada_em, motivo_cancelamento, created_at, inicio_efetivo, desmobilizacao_iniciada_em, encerrada_operacional_em, data_encerramento_financeiro, encerrada_financeiro_em, fornecedores(razao_social, nome_fantasia), centros_custo(codigo, nome)",
     )
     .eq("empresa_id", contexto.empresa.id)
     .eq("id", id)
@@ -111,6 +116,11 @@ export async function obterLocacao(contexto: Contexto, id: string): Promise<Loca
     canceladaEm: data.cancelada_em,
     motivoCancelamento: data.motivo_cancelamento,
     criadaEm: data.created_at,
+    inicioEfetivo: data.inicio_efetivo,
+    desmobilizacaoIniciadaEm: data.desmobilizacao_iniciada_em,
+    encerradaOperacionalEm: data.encerrada_operacional_em,
+    dataEncerramentoFinanceiro: data.data_encerramento_financeiro,
+    encerradaFinanceiroEm: data.encerrada_financeiro_em,
   };
 }
 

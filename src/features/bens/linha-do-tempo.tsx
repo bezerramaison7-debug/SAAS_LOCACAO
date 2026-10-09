@@ -5,6 +5,8 @@ import {
   ClipboardCheck,
   PackageCheck,
   Split,
+  Truck,
+  Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import { type Route } from "next";
@@ -20,6 +22,8 @@ const ICONE = {
   VISTORIA: ClipboardCheck,
   OCORRENCIA: AlertTriangle,
   OCORRENCIA_FIM: CircleCheck,
+  DEVOLUCAO: Undo2,
+  DEVOLUCAO_FIM: Truck,
 } as const;
 
 const ROTA: Record<string, (id: string) => string> = {
@@ -28,6 +32,7 @@ const ROTA: Record<string, (id: string) => string> = {
   movimentacao: (id) => `/movimentacoes/${id}`,
   vistoria: (id) => `/vistorias/${id}`,
   ocorrencia: (id) => `/ocorrencias/${id}`,
+  devolucao: (id) => `/devolucoes/${id}`,
 };
 
 /** F6.3: linha do tempo imutável (eventos registrados; nada é editado). */

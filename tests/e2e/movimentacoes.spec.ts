@@ -5,7 +5,7 @@
  */
 import { type Browser, expect, type Locator, type Page, test } from "@playwright/test";
 
-import { larguraExcedente } from "./helpers";
+import { anexar, larguraExcedente } from "./helpers";
 import { criarAtivosRecebidos, JPEG_TESTE } from "./support/dados";
 import { arquivoSessao, CONTAS, entrar } from "./support/usuarios";
 
@@ -292,10 +292,11 @@ test.describe("ocorrências, troca, vistoria e QR (empresa A)", () => {
     await page.getByRole("button", { name: "Concluir vistoria" }).click();
     await expect(page.getByText(/Vistoria incompleta/)).toBeVisible();
 
-    await page
-      .getByLabel("Foto desta pergunta")
-      .first()
-      .setInputFiles({ name: "periodica.jpg", mimeType: "image/jpeg", buffer: JPEG_TESTE });
+    await anexar(page.getByLabel("Foto desta pergunta").first(), {
+      name: "periodica.jpg",
+      mimeType: "image/jpeg",
+      buffer: JPEG_TESTE,
+    });
     await expect(page.getByText("Arquivo enviado.").first()).toBeVisible();
     await page.getByRole("radio", { name: "Conforme", exact: true }).check();
     await page.getByRole("radio", { name: "Sim", exact: true }).check();
